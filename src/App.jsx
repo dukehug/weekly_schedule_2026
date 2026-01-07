@@ -395,7 +395,7 @@ const App = () => {
                   </button>
                 )}
                 <button type="submit" className="flex-[2] flex justify-center items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-medium shadow-md">
-                    <Save size={16} /> {editingEvent ? (isContinuous ? 'Update & Copy ' : 'Save') : 'New'}
+                    <Save size={16} /> {editingEvent ? (isContinuous ? 'Update' : 'Save') : 'New'}
                 </button>
               </div>
             </form>
