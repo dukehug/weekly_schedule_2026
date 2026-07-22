@@ -1,6 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { Save, Download, Plus, X, Trash2, Clock, MapPin, Calendar, CheckSquare, Check, RotateCcw } from 'lucide-react';
 
+const LEGACY_GRAY_COLOR = 'bg-gray-100 border-gray-300 text-gray-800';
+const SLATE_COLOR = 'bg-slate-200 border-slate-500 text-slate-900';
+
 // 定義可用的顏色選項
 const COLOR_OPTIONS = [
   { name: 'Blue', value: 'bg-blue-100 border-blue-300 text-blue-800', bg: 'bg-blue-100' },
@@ -12,7 +15,7 @@ const COLOR_OPTIONS = [
   { name: 'Pink', value: 'bg-pink-100 border-pink-300 text-pink-800', bg: 'bg-pink-100' },
   { name: 'Orange', value: 'bg-orange-100 border-orange-300 text-orange-800', bg: 'bg-orange-100' },
   { name: 'Teal', value: 'bg-teal-100 border-teal-300 text-teal-800', bg: 'bg-teal-100' },
-  { name: 'Gray', value: 'bg-gray-100 border-gray-300 text-gray-800', bg: 'bg-gray-100' },
+  { name: 'Slate', value: SLATE_COLOR, bg: 'bg-slate-300' },
 ];
 
 // 初始課程數據
@@ -48,7 +51,16 @@ const formatTime12H = (time) => {
 const loadInitialEvents = () => {
   try {
     const saved = localStorage.getItem('mySchedule');
-    return saved ? JSON.parse(saved) : INITIAL_EVENTS;
+    if (!saved) return INITIAL_EVENTS;
+
+    const savedEvents = JSON.parse(saved);
+    if (!Array.isArray(savedEvents)) return INITIAL_EVENTS;
+
+    return savedEvents.map(event => (
+      event.color === LEGACY_GRAY_COLOR
+        ? { ...event, color: SLATE_COLOR }
+        : event
+    ));
   } catch {
     localStorage.removeItem('mySchedule');
     return INITIAL_EVENTS;
@@ -268,7 +280,7 @@ const App = () => {
                   <div
                     key={event.id}
                     onClick={() => openEditModal(event)}
-                    className={`absolute z-10 m-1 p-2 rounded-lg border-l-4 shadow-sm cursor-pointer hover:shadow-md transition-all text-xs overflow-hidden leading-tight flex flex-col ${isShortEvent ? 'gap-0.5' : 'gap-1'} ${event.color} hover:brightness-95 print:border`}
+                    className={`absolute z-10 m-1 rounded-lg border-l-4 shadow-sm cursor-pointer hover:shadow-md transition-all text-xs overflow-hidden leading-tight flex flex-col ${isShortEvent ? 'gap-0.5 px-1.5 py-2' : 'gap-1 p-2'} ${event.color} hover:brightness-95 print:border`}
                     style={{
                       top: `${top}px`,
                       height: `${height - 2}px`,
@@ -276,8 +288,23 @@ const App = () => {
                       width: `calc((100% - 80px) / ${totalColumns} - 4px)`
                     }}
                   >
-                    <div className="font-bold text-sm shrink-0 truncate">{event.subject}</div>
-                    <div className={`${isShortEvent ? 'text-[11px]' : ''} shrink-0 opacity-90 truncate`}>{event.description}</div>
+                    {isShortEvent ? (
+                      <>
+                        <div className="flex min-w-0 shrink-0 items-center gap-0.5 whitespace-nowrap leading-none">
+                          <span className="min-w-0 flex-1 truncate text-[10px] font-bold">{event.subject}</span>
+                          <span className="shrink-0 text-[8px] opacity-80">• {event.start}–{event.end}</span>
+                          {event.room && (
+                            <span className="max-w-9 shrink-0 truncate text-[8px] opacity-80">• {event.room}</span>
+                          )}
+                        </div>
+                        <div className="shrink-0 truncate text-[10px] opacity-90">{event.description}</div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="font-bold text-sm shrink-0 truncate">{event.subject}</div>
+                        <div className="shrink-0 opacity-90 truncate">{event.description}</div>
+                      </>
+                    )}
                     {!isShortEvent && (
                       <div className="mt-auto flex flex-col gap-0.5 opacity-75 text-[10px]">
                         <div className="flex items-center gap-1">
