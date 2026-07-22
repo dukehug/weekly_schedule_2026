@@ -267,7 +267,8 @@ const App = () => {
                 const endMin = timeToMinutes(event.end);
                 const gridStartMin = START_HOUR * 60;
                 const durationMinutes = endMin - startMin;
-                const isShortEvent = durationMinutes <= 60;
+                const isTinyEvent = durationMinutes < 60;
+                const isCompactEvent = durationMinutes >= 60 && durationMinutes < 120;
                 
                 const top = ((startMin - gridStartMin) / 60) * HOUR_HEIGHT;
                 const height = (durationMinutes / 60) * HOUR_HEIGHT;
@@ -280,7 +281,7 @@ const App = () => {
                   <div
                     key={event.id}
                     onClick={() => openEditModal(event)}
-                    className={`absolute z-10 m-1 rounded-lg border-l-4 shadow-sm cursor-pointer hover:shadow-md transition-all text-xs overflow-hidden leading-tight flex flex-col ${isShortEvent ? 'gap-0 px-1.5 py-1.5' : 'gap-1 p-2'} ${event.color} hover:brightness-95 print:border`}
+                    className={`absolute z-10 m-1 rounded-lg border-l-4 shadow-sm cursor-pointer hover:shadow-md transition-all text-xs overflow-hidden leading-tight ${isTinyEvent ? 'flex flex-col justify-center gap-0.5 px-1.5 py-1' : isCompactEvent ? 'grid grid-rows-4 px-1.5 py-1' : 'flex flex-col gap-1 p-2'} ${event.color} hover:brightness-95 print:border`}
                     style={{
                       top: `${top}px`,
                       height: `${height - 2}px`,
@@ -288,20 +289,25 @@ const App = () => {
                       width: `calc((100% - 80px) / ${totalColumns} - 4px)`
                     }}
                   >
-                    {isShortEvent ? (
+                    {isTinyEvent ? (
                       <>
-                        <div className="shrink-0 truncate text-[10px] font-bold leading-[12px]">
-                          {event.subject}
+                        <div className="truncate text-[10px] font-bold leading-[12px]">{event.subject}</div>
+                        <div className="truncate text-[9px] leading-[11px] opacity-90">{event.description}</div>
+                      </>
+                    ) : isCompactEvent ? (
+                      <>
+                        <div className="flex min-h-0 items-center truncate text-[11px] font-bold leading-none">
+                          <span className="truncate">{event.subject}</span>
                         </div>
-                        <div className="shrink-0 truncate text-[9px] leading-[11px] opacity-90">
-                          {event.description}
+                        <div className="flex min-h-0 items-center truncate text-[10px] leading-none opacity-90">
+                          <span className="truncate">{event.description}</span>
                         </div>
-                        <div className="flex min-w-0 shrink-0 items-center gap-1 text-[9px] leading-[11px] opacity-80">
-                          <Clock size={8} className="shrink-0" />
+                        <div className="flex min-h-0 min-w-0 items-center gap-1 text-[9px] leading-none opacity-80">
+                          <Clock size={9} className="shrink-0" />
                           <span className="truncate">{formatTime12H(event.start)}–{formatTime12H(event.end)}</span>
                         </div>
-                        <div className="flex min-w-0 shrink-0 items-center gap-1 text-[9px] leading-[11px] opacity-80">
-                          <MapPin size={8} className="shrink-0" />
+                        <div className="flex min-h-0 min-w-0 items-center gap-1 text-[9px] leading-none opacity-80">
+                          <MapPin size={9} className="shrink-0" />
                           <span className="truncate">{event.room || '—'}</span>
                         </div>
                       </>
@@ -311,7 +317,7 @@ const App = () => {
                         <div className="shrink-0 opacity-90 truncate">{event.description}</div>
                       </>
                     )}
-                    {!isShortEvent && (
+                    {!isTinyEvent && !isCompactEvent && (
                       <div className="mt-auto flex flex-col gap-0.5 opacity-75 text-[10px]">
                         <div className="flex items-center gap-1">
                             <Clock size={10} />
