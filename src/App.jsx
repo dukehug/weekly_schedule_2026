@@ -280,7 +280,7 @@ const App = () => {
                   <div
                     key={event.id}
                     onClick={() => openEditModal(event)}
-                    className={`absolute z-10 m-1 rounded-lg border-l-4 shadow-sm cursor-pointer hover:shadow-md transition-all text-xs overflow-hidden leading-tight flex flex-col ${isShortEvent ? 'gap-0.5 px-1.5 py-2' : 'gap-1 p-2'} ${event.color} hover:brightness-95 print:border`}
+                    className={`absolute z-10 m-1 rounded-lg border-l-4 shadow-sm cursor-pointer hover:shadow-md transition-all text-xs overflow-hidden leading-tight flex flex-col ${isShortEvent ? 'gap-0 px-1.5 py-1.5' : 'gap-1 p-2'} ${event.color} hover:brightness-95 print:border`}
                     style={{
                       top: `${top}px`,
                       height: `${height - 2}px`,
@@ -290,14 +290,20 @@ const App = () => {
                   >
                     {isShortEvent ? (
                       <>
-                        <div className="flex min-w-0 shrink-0 items-center gap-0.5 whitespace-nowrap leading-none">
-                          <span className="min-w-0 flex-1 truncate text-[10px] font-bold">{event.subject}</span>
-                          <span className="shrink-0 text-[8px] opacity-80">• {event.start}–{event.end}</span>
-                          {event.room && (
-                            <span className="max-w-9 shrink-0 truncate text-[8px] opacity-80">• {event.room}</span>
-                          )}
+                        <div className="shrink-0 truncate text-[10px] font-bold leading-[12px]">
+                          {event.subject}
                         </div>
-                        <div className="shrink-0 truncate text-[10px] opacity-90">{event.description}</div>
+                        <div className="shrink-0 truncate text-[9px] leading-[11px] opacity-90">
+                          {event.description}
+                        </div>
+                        <div className="flex min-w-0 shrink-0 items-center gap-1 text-[9px] leading-[11px] opacity-80">
+                          <Clock size={8} className="shrink-0" />
+                          <span className="truncate">{formatTime12H(event.start)}–{formatTime12H(event.end)}</span>
+                        </div>
+                        <div className="flex min-w-0 shrink-0 items-center gap-1 text-[9px] leading-[11px] opacity-80">
+                          <MapPin size={8} className="shrink-0" />
+                          <span className="truncate">{event.room || '—'}</span>
+                        </div>
                       </>
                     ) : (
                       <>
