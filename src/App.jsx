@@ -254,9 +254,11 @@ const App = () => {
                 const startMin = timeToMinutes(event.start);
                 const endMin = timeToMinutes(event.end);
                 const gridStartMin = START_HOUR * 60;
+                const durationMinutes = endMin - startMin;
+                const isShortEvent = durationMinutes <= 60;
                 
                 const top = ((startMin - gridStartMin) / 60) * HOUR_HEIGHT;
-                const height = ((endMin - startMin) / 60) * HOUR_HEIGHT;
+                const height = (durationMinutes / 60) * HOUR_HEIGHT;
                 
                 // 動態寬度計算：(100% - 80px) / 7
                 // 動態 Left 計算：80px + (dayIndex * (100% - 80px) / 7)
@@ -266,7 +268,7 @@ const App = () => {
                   <div
                     key={event.id}
                     onClick={() => openEditModal(event)}
-                    className={`absolute z-10 m-1 p-2 rounded-lg border-l-4 shadow-sm cursor-pointer hover:shadow-md transition-all text-xs overflow-hidden leading-tight flex flex-col gap-1 ${event.color} hover:brightness-95 print:border`}
+                    className={`absolute z-10 m-1 p-2 rounded-lg border-l-4 shadow-sm cursor-pointer hover:shadow-md transition-all text-xs overflow-hidden leading-tight flex flex-col ${isShortEvent ? 'gap-0.5' : 'gap-1'} ${event.color} hover:brightness-95 print:border`}
                     style={{
                       top: `${top}px`,
                       height: `${height - 2}px`,
@@ -274,9 +276,10 @@ const App = () => {
                       width: `calc((100% - 80px) / ${totalColumns} - 4px)`
                     }}
                   >
-                    <div className="font-bold text-sm truncate">{event.subject}</div>
-                    <div className="opacity-90 truncate">{event.description}</div>
-                    <div className="mt-auto flex flex-col gap-0.5 opacity-75 text-[10px]">
+                    <div className="font-bold text-sm shrink-0 truncate">{event.subject}</div>
+                    <div className={`${isShortEvent ? 'text-[11px]' : ''} shrink-0 opacity-90 truncate`}>{event.description}</div>
+                    {!isShortEvent && (
+                      <div className="mt-auto flex flex-col gap-0.5 opacity-75 text-[10px]">
                         <div className="flex items-center gap-1">
                             <Clock size={10} />
                             {formatTime12H(event.start)} - {formatTime12H(event.end)}
@@ -285,7 +288,8 @@ const App = () => {
                             <MapPin size={10} />
                             {event.room}
                         </div>
-                    </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
