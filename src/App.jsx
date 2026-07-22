@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { Save, Download, Plus, X, Trash2, Clock, MapPin, Calendar, CheckSquare, Check, RotateCcw } from 'lucide-react';
 
 // 定義可用的顏色選項
@@ -30,6 +30,7 @@ const INITIAL_EVENTS = [
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const START_HOUR = 7;
 const END_HOUR = 22;
+const HOUR_HEIGHT = 80;
 
 // 輔助函數：時間轉換
 const timeToMinutes = (time) => {
@@ -44,8 +45,18 @@ const formatTime12H = (time) => {
   return `${hour12}:${m.toString().padStart(2, '0')} ${period}`;
 };
 
+const loadInitialEvents = () => {
+  try {
+    const saved = localStorage.getItem('mySchedule');
+    return saved ? JSON.parse(saved) : INITIAL_EVENTS;
+  } catch {
+    localStorage.removeItem('mySchedule');
+    return INITIAL_EVENTS;
+  }
+};
+
 const App = () => {
-  const [events, setEvents] = useState(INITIAL_EVENTS);
+  const [events, setEvents] = useState(loadInitialEvents);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
   
@@ -54,13 +65,6 @@ const App = () => {
   const [selectedColor, setSelectedColor] = useState(COLOR_OPTIONS[0].value);
 
   const scheduleRef = useRef(null);
-
-  useEffect(() => {
-    const saved = localStorage.getItem('mySchedule');
-    if (saved) {
-      setEvents(JSON.parse(saved));
-    }
-  }, []);
 
   const saveSchedule = () => {
     localStorage.setItem('mySchedule', JSON.stringify(events));
@@ -213,22 +217,34 @@ const App = () => {
             </div>
 
             {/* Grid Body */}
-            <div className="relative" style={gridStyle}>
+            <div
+              className="relative"
+              style={{ height: `${(END_HOUR - START_HOUR) * HOUR_HEIGHT}px` }}
+            >
               
               {/* Time Slots Background */}
-              {Array.from({ length: END_HOUR - START_HOUR }).map((_, i) => {
-                const hour = START_HOUR + i;
-                return (
-                  <React.Fragment key={hour}>
-                    <div className="h-20 border-r border-b border-gray-100 text-xs text-gray-500 font-medium flex flex-col justify-start items-center pt-1 bg-gray-50/50">
-                        <span>{hour > 12 ? hour - 12 : hour} {hour >= 12 ? 'PM' : 'AM'}</span>
-                    </div>
-                    {DAYS.map((d, colIndex) => (
-                      <div key={`${d}-${hour}`} className={`h-20 border-r border-b border-gray-100 ${colIndex === DAYS.length -1 ? 'border-r-0' : ''}`}></div>
-                    ))}
-                  </React.Fragment>
-                );
-              })}
+              <div className="absolute inset-0" style={gridStyle}>
+                {Array.from({ length: END_HOUR - START_HOUR }).map((_, i) => {
+                  const hour = START_HOUR + i;
+                  return (
+                    <React.Fragment key={hour}>
+                      <div
+                        className="border-r border-b border-gray-100 text-xs text-gray-500 font-medium flex flex-col justify-start items-center pt-1 bg-gray-50/50"
+                        style={{ height: `${HOUR_HEIGHT}px` }}
+                      >
+                          <span>{hour > 12 ? hour - 12 : hour} {hour >= 12 ? 'PM' : 'AM'}</span>
+                      </div>
+                      {DAYS.map((d, colIndex) => (
+                        <div
+                          key={`${d}-${hour}`}
+                          className={`border-r border-b border-gray-100 ${colIndex === DAYS.length -1 ? 'border-r-0' : ''}`}
+                          style={{ height: `${HOUR_HEIGHT}px` }}
+                        ></div>
+                      ))}
+                    </React.Fragment>
+                  );
+                })}
+              </div>
 
               {/* Events Overlay */}
               {events.map((event) => {
@@ -239,8 +255,8 @@ const App = () => {
                 const endMin = timeToMinutes(event.end);
                 const gridStartMin = START_HOUR * 60;
                 
-                const top = ((startMin - gridStartMin) / 60) * 80;
-                const height = ((endMin - startMin) / 60) * 80;
+                const top = ((startMin - gridStartMin) / 60) * HOUR_HEIGHT;
+                const height = ((endMin - startMin) / 60) * HOUR_HEIGHT;
                 
                 // 動態寬度計算：(100% - 80px) / 7
                 // 動態 Left 計算：80px + (dayIndex * (100% - 80px) / 7)
