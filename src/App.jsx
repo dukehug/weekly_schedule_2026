@@ -258,7 +258,7 @@ const App = () => {
                 My Weekly Schedule 
             </h1>
             <p className="text-sm text-gray-500 mt-1">
-              Plan your week at a glance. Start on  <a className="text-gray-700 underline underline-offset-2 hover:text-gray-950" href="https://github.com/dukehug/weekly_schedule_2026" target="_blank" >GitHub</a>.
+              Plan your week at a glance. Star on  <a className="text-gray-700 underline underline-offset-2 hover:text-gray-950" href="https://github.com/dukehug/weekly_schedule_2026" target="_blank" >GitHub</a>.
             </p>
         </div>
         <div className="flex flex-wrap gap-2">
