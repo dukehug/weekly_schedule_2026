@@ -22,13 +22,7 @@ const COLOR_OPTIONS = [
 
 // 初始課程數據
 const INITIAL_EVENTS = [
-  { id: '1', subject: 'IT226L', description: 'ADV.DATABASE MGT SYSTEM LAB', day: 'Wednesday', start: '14:00', end: '17:00', room: 'TBA', color: 'bg-blue-100 border-blue-300 text-blue-800' },
-  { id: '2', subject: 'IT226', description: 'ADV.DATABASE MGT SYSTEM LEC', day: 'Tuesday', start: '15:00', end: '16:00', room: 'SV311', color: 'bg-blue-50 border-blue-200 text-blue-700' },
-  { id: '3', subject: 'IT226', description: 'ADV.DATABASE MGT SYSTEM LEC', day: 'Thursday', start: '15:00', end: '16:00', room: 'SV311', color: 'bg-blue-50 border-blue-200 text-blue-700' },
-  { id: '4', subject: 'CM215L', description: 'APPLIED CHEMISTRY FOR IT LAB', day: 'Friday', start: '10:30', end: '13:30', room: 'OZ403', color: 'bg-green-100 border-green-300 text-green-800' },
-  { id: '5', subject: 'CM215', description: 'APPLIED CHEMISTRY FOR IT LEC', day: 'Tuesday', start: '13:00', end: '14:00', room: 'SV203', color: 'bg-green-50 border-green-200 text-green-700' },
-  { id: '6', subject: 'CM215', description: 'APPLIED CHEMISTRY FOR IT LEC', day: 'Thursday', start: '13:00', end: '14:00', room: 'SV203', color: 'bg-green-50 border-green-200 text-green-700' },
-  { id: '7', subject: 'PH114', description: 'ETHICS', day: 'Monday', start: '18:00', end: '19:00', room: 'ST126', color: 'bg-purple-100 border-purple-300 text-purple-800' },
+  { id: '1', subject: 'IT226L', description: 'EXAMPLE COURSE', day: 'Wednesday', start: '14:00', end: '17:00', room: 'TBA', color: 'bg-blue-100 border-blue-300 text-blue-800' },
 ];
 
 // 修改 DAYS 包含週末
