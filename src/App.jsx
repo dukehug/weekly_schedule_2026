@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { Save, Download, Plus, X, Trash2, Clock, MapPin, Calendar, CheckSquare, Check, RotateCcw, Upload } from 'lucide-react';
+import { Save, Download, Plus, X, Trash2, Clock, MapPin, Calendar, CheckSquare, Check, RotateCcw, Upload, FileText, Smartphone, LoaderCircle } from 'lucide-react';
 import { parseImportedSchedule } from './importSchedule';
+import { exportSchedule } from './printSchedule';
 
 const LEGACY_GRAY_COLOR = 'bg-gray-100 border-gray-300 text-gray-800';
 const SLATE_COLOR = 'bg-slate-200 border-slate-500 text-slate-900';
@@ -72,6 +73,9 @@ const App = () => {
   const [events, setEvents] = useState(loadInitialEvents);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [printError, setPrintError] = useState('');
   const [importText, setImportText] = useState('');
   const [importError, setImportError] = useState('');
   const [editingEvent, setEditingEvent] = useState(null);
@@ -87,8 +91,29 @@ const App = () => {
     alert('Saved successfully');
   };
 
-  const exportSchedule = () => {
-    window.print();
+  const openPrintModal = () => {
+    setPrintError('');
+    setIsPrintModalOpen(true);
+  };
+
+  const closePrintModal = () => {
+    if (isExporting) return;
+    setIsPrintModalOpen(false);
+    setPrintError('');
+  };
+
+  const handlePrint = async (format) => {
+    setIsExporting(true);
+    setPrintError('');
+
+    try {
+      await exportSchedule(scheduleRef.current, format);
+      setIsPrintModalOpen(false);
+    } catch (error) {
+      setPrintError(error instanceof Error ? error.message : 'Unable to export the schedule.');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const openImportModal = () => {
@@ -221,7 +246,7 @@ const App = () => {
                 My Weekly Schedule 
             </h1>
             <p className="text-sm text-gray-500 mt-1">
-              Plan your week at a glance. Built by <a className="text-gray-700 underline underline-offset-2 hover:text-gray-950" href="https://github.com/dukehug">Duke</a>.
+              Plan your week at a glance. Start on  <a className="text-gray-700 underline underline-offset-2 hover:text-gray-950" href="https://github.com/dukehug/weekly_schedule_2026" target="_blank" >GitHub</a>.
             </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -234,7 +259,7 @@ const App = () => {
           <button onClick={saveSchedule} className="flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-700 px-3.5 py-2 rounded-md border border-gray-300 transition-colors">
             <Save size={18} /> Save Settings
           </button>
-          <button onClick={exportSchedule} className="flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-700 px-3.5 py-2 rounded-md border border-gray-300 transition-colors">
+          <button onClick={openPrintModal} className="flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-700 px-3.5 py-2 rounded-md border border-gray-300 transition-colors">
             <Download size={18} /> Print
           </button>
            <button onClick={resetSchedule} className="flex items-center gap-2 bg-white hover:bg-red-50 text-red-600 px-3.5 py-2 rounded-md border border-gray-300 hover:border-red-300 transition-colors">
@@ -244,10 +269,10 @@ const App = () => {
       </div>
 
       {/* Main Schedule Grid */}
-      <div className="max-w-full mx-auto bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden print:shadow-none print:w-full" ref={scheduleRef}>
+      <div className="max-w-full mx-auto bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden print:shadow-none print:w-full">
         <div className="overflow-x-auto">
           {/* 增加 min-w 以容納 7 天 */}
-          <div className="min-w-[1000px] relative">
+          <div className="min-w-[1000px] relative" ref={scheduleRef}>
             
             {/* Header Row (Days) */}
             <div style={gridStyle} className="border-b border-gray-200 bg-gray-50 sticky top-0 z-10">
@@ -371,6 +396,83 @@ const App = () => {
         </div>
       </div>
 
+      {/* Print / Export Modal */}
+      {isPrintModalOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 print:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="print-dialog-title"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closePrintModal();
+          }}
+        >
+          <div className="bg-white rounded-xl border border-gray-200 shadow-xl w-full max-w-lg overflow-hidden">
+            <div className="border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+              <div>
+                <h3 id="print-dialog-title" className="text-gray-900 font-semibold text-lg">
+                  Export schedule
+                </h3>
+                <p className="text-sm text-gray-500 mt-0.5">Choose the size you want to download.</p>
+              </div>
+              <button
+                type="button"
+                onClick={closePrintModal}
+                disabled={isExporting}
+                className="text-gray-400 hover:text-gray-700 disabled:opacity-40 transition-colors"
+                aria-label="Close export dialog"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 grid sm:grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => handlePrint('a4')}
+                disabled={isExporting}
+                className="group text-left rounded-xl border border-gray-200 p-5 hover:border-gray-400 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-400 disabled:opacity-50 disabled:cursor-wait transition-colors"
+              >
+                <span className="w-11 h-11 rounded-lg bg-gray-100 text-gray-700 flex items-center justify-center mb-4 group-hover:bg-white">
+                  <FileText size={22} />
+                </span>
+                <span className="block font-semibold text-gray-900">A4</span>
+                <span className="block text-sm text-gray-500 mt-1">Landscape · PDF</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handlePrint('wallpaper')}
+                disabled={isExporting}
+                className="group text-left rounded-xl border border-gray-200 p-5 hover:border-gray-400 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-400 disabled:opacity-50 disabled:cursor-wait transition-colors"
+              >
+                <span className="w-11 h-11 rounded-lg bg-gray-100 text-gray-700 flex items-center justify-center mb-4 group-hover:bg-white">
+                  <Smartphone size={22} />
+                </span>
+                <span className="block font-semibold text-gray-900">Phone wallpaper</span>
+                <span className="block text-sm text-gray-500 mt-1">1440 × 3200 · JPG</span>
+              </button>
+            </div>
+
+            {(isExporting || printError) && (
+              <div className="px-6 pb-5">
+                {isExporting && (
+                  <div className="flex items-center gap-2 text-sm text-gray-600" role="status">
+                    <LoaderCircle size={16} className="animate-spin" />
+                    Preparing your download…
+                  </div>
+                )}
+                {printError && (
+                  <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                    {printError}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Import Modal */}
       {isImportModalOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 print:hidden">
@@ -389,7 +491,8 @@ const App = () => {
                 </label>
                 <p className="text-sm text-gray-500 mb-3">
                   Importing will replace the current schedule and save it automatically.
-                  <b>Only supports ‘ADU live Enrolled Subjects’Format.</b>
+                  <br/>
+                  <b>Copy ‘Enrolled Subjects’ from your ADU Live, then paste it into the content box.</b>
                 </p>
                 <textarea
                   id="import-data"
