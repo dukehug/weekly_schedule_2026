@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { Save, Download, Plus, X, Trash2, Clock, MapPin, Calendar, CheckSquare, Check, RotateCcw, Upload, FileText, Smartphone, LoaderCircle } from 'lucide-react';
 import { parseImportedSchedule } from './importSchedule';
 import { exportSchedule } from './printSchedule';
+import { trackEvent } from './analytics';
 
 const LEGACY_GRAY_COLOR = 'bg-gray-100 border-gray-300 text-gray-800';
 const SLATE_COLOR = 'bg-slate-200 border-slate-500 text-slate-900';
@@ -81,6 +82,7 @@ const App = () => {
 
   const saveSchedule = () => {
     localStorage.setItem('mySchedule', JSON.stringify(events));
+    trackEvent('save_schedule', { session_count: events.length });
     alert('Saved successfully');
   };
 
@@ -101,6 +103,10 @@ const App = () => {
 
     try {
       await exportSchedule(format, events);
+      trackEvent('export_schedule', {
+        export_format: format,
+        session_count: events.length,
+      });
       setIsPrintModalOpen(false);
     } catch (error) {
       setPrintError(error instanceof Error ? error.message : 'Unable to export the schedule.');
@@ -127,6 +133,7 @@ const App = () => {
       const importedEvents = parseImportedSchedule(importText);
       setEvents(importedEvents);
       localStorage.setItem('mySchedule', JSON.stringify(importedEvents));
+      trackEvent('import_schedule', { session_count: importedEvents.length });
       closeImportModal();
     } catch (error) {
       setImportError(error instanceof Error ? error.message : 'Unable to import this data.');
@@ -138,6 +145,7 @@ const App = () => {
       const newEvents = events.filter(e => e.id !== id);
       setEvents(newEvents);
       localStorage.setItem('mySchedule', JSON.stringify(newEvents));
+      trackEvent('delete_class', { session_count: newEvents.length });
       setIsModalOpen(false);
     }
   };
@@ -185,6 +193,10 @@ const App = () => {
     }
 
     setEvents(updatedEvents);
+    trackEvent('save_class', {
+      operation: editingEvent ? 'edit' : 'create',
+      session_count: updatedEvents.length,
+    });
     setIsModalOpen(false);
     setEditingEvent(null);
   };
@@ -210,6 +222,7 @@ const App = () => {
       if(window.confirm("Are you sure you want to clear all data? This operation cannot be undone.")) {
           setEvents([]); // 清空數據
           localStorage.removeItem('mySchedule');
+          trackEvent('reset_schedule');
       }
   }
 
