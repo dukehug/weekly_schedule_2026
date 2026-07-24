@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { Save, Download, Plus, X, Trash2, Clock, MapPin, Calendar, CheckSquare, Check, RotateCcw } from 'lucide-react';
+import { Save, Download, Plus, X, Trash2, Clock, MapPin, Calendar, CheckSquare, Check, RotateCcw, Upload } from 'lucide-react';
+import { parseImportedSchedule } from './importSchedule';
 
 const LEGACY_GRAY_COLOR = 'bg-gray-100 border-gray-300 text-gray-800';
 const SLATE_COLOR = 'bg-slate-200 border-slate-500 text-slate-900';
@@ -70,6 +71,9 @@ const loadInitialEvents = () => {
 const App = () => {
   const [events, setEvents] = useState(loadInitialEvents);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importText, setImportText] = useState('');
+  const [importError, setImportError] = useState('');
   const [editingEvent, setEditingEvent] = useState(null);
   
   const [isContinuous, setIsContinuous] = useState(false);
@@ -85,6 +89,30 @@ const App = () => {
 
   const exportSchedule = () => {
     window.print();
+  };
+
+  const openImportModal = () => {
+    setImportText('');
+    setImportError('');
+    setIsImportModalOpen(true);
+  };
+
+  const closeImportModal = () => {
+    setIsImportModalOpen(false);
+    setImportError('');
+  };
+
+  const handleImport = (e) => {
+    e.preventDefault();
+
+    try {
+      const importedEvents = parseImportedSchedule(importText);
+      setEvents(importedEvents);
+      localStorage.setItem('mySchedule', JSON.stringify(importedEvents));
+      closeImportModal();
+    } catch (error) {
+      setImportError(error instanceof Error ? error.message : 'Unable to import this data.');
+    }
   };
 
   const handleDelete = (id) => {
@@ -183,35 +211,40 @@ const App = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8 font-sans print:bg-white print:p-0">
+    <div className="min-h-screen bg-slate-50 p-4 md:p-6 font-sans text-gray-900 print:bg-white print:p-0">
       
       {/* Header */}
-      <div className="max-w-7xl mx-auto mb-6 flex flex-col md:flex-row justify-between items-center print:hidden">
+      <div className="max-w-full mx-auto mb-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 print:hidden">
         <div>
-            <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
-                <Calendar className="w-8 h-8 text-blue-600"/> 
+            <h1 className="text-2xl font-semibold tracking-tight text-gray-900 flex items-center gap-2">
+                <Calendar className="w-6 h-6 text-gray-600"/>
                 My Weekly Schedule 
             </h1>
-            <p className="text-gray-500 mt-1"> Weekly Schedule APP - create by <a href="https://github.com/dukehug">Duke</a>  & Gemini &  ❤️ </p>
+            <p className="text-sm text-gray-500 mt-1">
+              Plan your week at a glance. Built by <a className="text-gray-700 underline underline-offset-2 hover:text-gray-950" href="https://github.com/dukehug">Duke</a>.
+            </p>
         </div>
-        <div className="flex gap-3 mt-4 md:mt-0">
-          <button onClick={openNewEventModal} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow transition">
+        <div className="flex flex-wrap gap-2">
+          <button onClick={openNewEventModal} className="flex items-center gap-2 bg-gray-900 hover:bg-gray-800 text-white px-3.5 py-2 rounded-md border border-gray-900 transition-colors">
             <Plus size={18} /> Add New
           </button>
-          <button onClick={saveSchedule} className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg shadow transition">
-            <Save size={18} /> Save Setings
+          <button onClick={openImportModal} className="flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-700 px-3.5 py-2 rounded-md border border-gray-300 transition-colors">
+            <Upload size={18} /> Import
           </button>
-          <button onClick={exportSchedule} className="flex items-center gap-2 bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded-lg shadow transition">
+          <button onClick={saveSchedule} className="flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-700 px-3.5 py-2 rounded-md border border-gray-300 transition-colors">
+            <Save size={18} /> Save Settings
+          </button>
+          <button onClick={exportSchedule} className="flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-700 px-3.5 py-2 rounded-md border border-gray-300 transition-colors">
             <Download size={18} /> Print
           </button>
-           <button onClick={resetSchedule} className="flex items-center gap-2 bg-white hover:bg-red-50 text-red-600 px-4 py-2 rounded-lg border border-gray-300 hover:border-red-200 transition shadow-sm">
+           <button onClick={resetSchedule} className="flex items-center gap-2 bg-white hover:bg-red-50 text-red-600 px-3.5 py-2 rounded-md border border-gray-300 hover:border-red-300 transition-colors">
             <RotateCcw size={18} /> Empty
           </button>
         </div>
       </div>
 
       {/* Main Schedule Grid */}
-      <div className="max-w-full mx-auto bg-white rounded-xl shadow-xl overflow-hidden print:shadow-none print:w-full" ref={scheduleRef}>
+      <div className="max-w-full mx-auto bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden print:shadow-none print:w-full" ref={scheduleRef}>
         <div className="overflow-x-auto">
           {/* 增加 min-w 以容納 7 天 */}
           <div className="min-w-[1000px] relative">
@@ -222,7 +255,7 @@ const App = () => {
                 Time / Day
               </div>
               {DAYS.map(day => (
-                <div key={day} className="p-4 text-center border-r border-gray-200 font-bold text-gray-700 uppercase tracking-wider text-sm md:text-base">
+                <div key={day} className="p-4 text-center border-r border-gray-200 font-semibold text-gray-700 text-sm">
                   {day}
                 </div>
               ))}
@@ -281,7 +314,7 @@ const App = () => {
                   <div
                     key={event.id}
                     onClick={() => openEditModal(event)}
-                    className={`absolute z-10 m-1 rounded-lg border-l-4 shadow-sm cursor-pointer hover:shadow-md transition-all text-xs overflow-hidden leading-tight ${isTinyEvent ? 'flex flex-col justify-center gap-0.5 px-1.5 py-1' : isCompactEvent ? 'grid grid-rows-4 px-1.5 py-1' : 'flex flex-col gap-1 p-2'} ${event.color} hover:brightness-95 print:border`}
+                    className={`absolute z-10 m-1 rounded-md border-l-4 cursor-pointer hover:ring-1 hover:ring-black/10 transition-colors text-xs overflow-hidden leading-tight ${isTinyEvent ? 'flex flex-col justify-center gap-0.5 px-1.5 py-1' : isCompactEvent ? 'grid grid-rows-4 px-1.5 py-1' : 'flex flex-col gap-1 p-2'} ${event.color} hover:brightness-95 print:border`}
                     style={{
                       top: `${top}px`,
                       height: `${height - 2}px`,
@@ -338,15 +371,68 @@ const App = () => {
         </div>
       </div>
 
+      {/* Import Modal */}
+      {isImportModalOpen && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 print:hidden">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-xl w-full max-w-2xl overflow-hidden">
+            <div className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+              <h3 className="text-gray-900 font-semibold text-lg">Import Schedule</h3>
+              <button type="button" onClick={closeImportModal} className="text-gray-400 hover:text-gray-700 transition-colors" aria-label="Close import dialog">
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleImport} className="p-6 space-y-4">
+              <div>
+                <label htmlFor="import-data" className="block text-sm font-medium text-gray-700 mb-1">
+                  Paste your schedule data
+                </label>
+                <p className="text-sm text-gray-500 mb-3">
+                  Importing will replace the current schedule and save it automatically.
+                  <b>Only supports ‘ADU live Enrolled Subjects’Format.</b>
+                </p>
+                <textarea
+                  id="import-data"
+                  value={importText}
+                  onChange={(e) => {
+                    setImportText(e.target.value);
+                    if (importError) setImportError('');
+                  }}
+                  rows={14}
+                  autoFocus
+                  placeholder={'Section\nSubject\nUnits\n29082\nIT327L : APPLICATIONS DEVT LAB (290048)\nTH 14:00-17:00 CL10\n1'}
+                  className="w-full resize-y rounded-md border border-gray-300 px-3 py-2 font-mono text-sm focus:ring-2 focus:ring-gray-400 focus:border-gray-500 outline-none"
+                />
+              </div>
+
+              {importError && (
+                <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {importError}
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                <button type="button" onClick={closeImportModal} className="px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors font-medium">
+                  Cancel
+                </button>
+                <button type="submit" className="flex items-center gap-2 bg-gray-900 text-white px-4 py-2 rounded-md hover:bg-gray-800 transition-colors font-medium">
+                  <Upload size={16} /> Confirm Import
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Edit/Add Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 print:hidden">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden max-h-[90vh] overflow-y-auto">
-            <div className="bg-blue-600 px-6 py-4 flex justify-between items-center sticky top-0 z-10">
-                <h3 className="text-white font-bold text-lg">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 print:hidden">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-xl w-full max-w-md overflow-hidden max-h-[90vh] overflow-y-auto">
+            <div className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center sticky top-0 z-10">
+                <h3 className="text-gray-900 font-semibold text-lg">
                     {editingEvent ? 'Edit Subject' : 'Add Subject'}
                 </h3>
-                <button onClick={() => setIsModalOpen(false)} className="text-white/80 hover:text-white transition">
+                <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-700 transition-colors" aria-label="Close subject dialog">
                     <X size={20} />
                 </button>
             </div>
@@ -354,7 +440,7 @@ const App = () => {
             <form onSubmit={handleSaveEvent} className="p-6 space-y-4">
               
               {/* Mode Selection */}
-              <div className="flex items-center gap-4 bg-gray-50 p-3 rounded-lg border border-gray-100">
+              <div className="flex items-center gap-4 bg-gray-50 p-3 rounded-md border border-gray-200">
                   <span className="text-sm font-medium text-gray-700">Schedule Model：</span>
                   <label className="flex items-center gap-2 cursor-pointer">
                       <input 
@@ -362,7 +448,7 @@ const App = () => {
                         name="mode" 
                         checked={!isContinuous} 
                         onChange={() => setIsContinuous(false)}
-                        className="text-blue-600 focus:ring-blue-500"
+                        className="accent-gray-900"
                       />
                       <span className="text-sm text-gray-600">Single</span>
                   </label>
@@ -372,7 +458,7 @@ const App = () => {
                         name="mode" 
                         checked={isContinuous} 
                         onChange={() => setIsContinuous(true)}
-                        className="text-blue-600 focus:ring-blue-500"
+                        className="accent-gray-900"
                       />
                       <span className="text-sm text-gray-600">Continue</span>
                   </label>
@@ -381,11 +467,11 @@ const App = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Course code</label>
-                    <input name="subject" defaultValue={editingEvent?.subject} required className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" placeholder="e.g. IT226" />
+                    <input name="subject" defaultValue={editingEvent?.subject} required className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-gray-400 focus:border-gray-500 outline-none transition" placeholder="e.g. IT226" />
                 </div>
                 <div className="col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Subject Name / Description</label>
-                    <input name="description" defaultValue={editingEvent?.description} className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" placeholder="e.g. ADV. DATABASE" />
+                    <input name="description" defaultValue={editingEvent?.description} className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-gray-400 focus:border-gray-500 outline-none transition" placeholder="e.g. ADV. DATABASE" />
                 </div>
                 
                 <div className="col-span-2">
@@ -393,16 +479,16 @@ const App = () => {
                     
                     {!isContinuous ? (
                         // Single Mode: Dropdown
-                        <select name="day" defaultValue={editingEvent?.day || 'Monday'} className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                        <select name="day" defaultValue={editingEvent?.day || 'Monday'} className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-gray-400 outline-none">
                             {DAYS.map(d => <option key={d} value={d}>{d}</option>)}
                         </select>
                     ) : (
                         // Continuous Mode: Checkboxes (Grid adjusted for 7 days might need smaller font or more columns)
-                        <div className="grid grid-cols-3 gap-2 bg-gray-50 p-3 rounded-lg border border-gray-200">
+                        <div className="grid grid-cols-3 gap-2 bg-gray-50 p-3 rounded-md border border-gray-200">
                             {DAYS.map(d => (
                                 <label key={d} className="flex items-center gap-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
                                     <div 
-                                        className={`w-4 h-4 border rounded flex items-center justify-center transition-colors flex-shrink-0 ${selectedDays.includes(d) ? 'bg-blue-600 border-blue-600' : 'bg-white border-gray-300'}`}
+                                        className={`w-4 h-4 border rounded flex items-center justify-center transition-colors flex-shrink-0 ${selectedDays.includes(d) ? 'bg-gray-900 border-gray-900' : 'bg-white border-gray-300'}`}
                                         onClick={(e) => { e.preventDefault(); toggleDay(d); }}
                                     >
                                         {selectedDays.includes(d) && <CheckSquare size={12} className="text-white" />}
@@ -423,7 +509,7 @@ const App = () => {
                                  key={color.name}
                                  type="button"
                                  onClick={() => setSelectedColor(color.value)}
-                                 className={`w-8 h-8 rounded-full ${color.bg} border-2 flex items-center justify-center transition-all hover:scale-110 ${selectedColor === color.value ? 'border-gray-600 shadow-md ring-2 ring-blue-200' : 'border-transparent'}`}
+                                 className={`w-8 h-8 rounded-full ${color.bg} border-2 flex items-center justify-center transition-colors ${selectedColor === color.value ? 'border-gray-700 ring-2 ring-gray-200' : 'border-transparent'}`}
                                  title={color.name}
                              >
                                  {selectedColor === color.value && <Check size={14} className="text-gray-700" />}
@@ -434,26 +520,26 @@ const App = () => {
 
                 <div className="col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Room</label>
-                    <input name="room" defaultValue={editingEvent?.room} className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g. SV311" />
+                    <input name="room" defaultValue={editingEvent?.room} className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-gray-400 outline-none" placeholder="e.g. SV311" />
                 </div>
                 
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Start time</label>
-                    <input type="time" name="start" defaultValue={editingEvent?.start || '08:00'} className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" required />
+                    <input type="time" name="start" defaultValue={editingEvent?.start || '08:00'} className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-gray-400 outline-none" required />
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">End time</label>
-                    <input type="time" name="end" defaultValue={editingEvent?.end || '09:00'} className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" required />
+                    <input type="time" name="end" defaultValue={editingEvent?.end || '09:00'} className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-gray-400 outline-none" required />
                 </div>
               </div>
 
               <div className="flex gap-3 pt-4 border-t border-gray-100 mt-4">
                 {editingEvent && (
-                  <button type="button" onClick={() => handleDelete(editingEvent.id)} className="flex-1 flex justify-center items-center gap-2 bg-red-50 text-red-600 px-4 py-2 rounded-lg hover:bg-red-100 transition font-medium">
+                  <button type="button" onClick={() => handleDelete(editingEvent.id)} className="flex-1 flex justify-center items-center gap-2 bg-white text-red-600 px-4 py-2 rounded-md border border-red-200 hover:bg-red-50 transition-colors font-medium">
                     <Trash2 size={16} /> Delete
                   </button>
                 )}
-                <button type="submit" className="flex-[2] flex justify-center items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-medium shadow-md">
+                <button type="submit" className="flex-[2] flex justify-center items-center gap-2 bg-gray-900 text-white px-4 py-2 rounded-md hover:bg-gray-800 transition-colors font-medium">
                     <Save size={16} /> {editingEvent ? (isContinuous ? 'Update' : 'Save') : 'New'}
                 </button>
               </div>
