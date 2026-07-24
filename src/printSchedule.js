@@ -191,7 +191,7 @@ const createWallpaperCanvas = (events) => {
   context.font = '700 25px system-ui, -apple-system, sans-serif';
   context.letterSpacing = '2px';
   context.fillText(
-    `IT COURSES · ${firstDay.toUpperCase()} TO ${lastDay.toUpperCase()} · 24-HOUR TIME`,
+    `${firstDay.toUpperCase()} TO ${lastDay.toUpperCase()} `,
     canvas.width / 2,
     194,
   );
