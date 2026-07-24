@@ -6,8 +6,28 @@ const A4_LANDSCAPE = {
 
 const WALLPAPER = {
   width: 1440,
-  height: 3200,
-  padding: 72,
+  height: 3120,
+  padding: 54,
+};
+
+const DAY_ORDER = [
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
+];
+
+const DAY_LABELS = {
+  Monday: 'mon',
+  Tuesday: 'tue',
+  Wednesday: 'wed',
+  Thursday: 'thu',
+  Friday: 'fri',
+  Saturday: 'sat',
+  Sunday: 'sun',
 };
 
 const waitForFonts = async () => {
@@ -116,49 +136,224 @@ const roundedRect = (context, x, y, width, height, radius) => {
   context.roundRect(x, y, width, height, radius);
 };
 
-const createWallpaperCanvas = (scheduleCanvas) => {
+const fitText = (context, value, maxWidth) => {
+  const text = String(value || '').trim();
+  if (context.measureText(text).width <= maxWidth) return text;
+
+  let shortened = text;
+  while (shortened.length > 1 && context.measureText(`${shortened}…`).width > maxWidth) {
+    shortened = shortened.slice(0, -1);
+  }
+  return `${shortened.trim()}…`;
+};
+
+const groupEventsByDay = (events) => DAY_ORDER
+  .map(day => ({
+    day,
+    events: events
+      .filter(event => event.day === day)
+      .sort((first, second) => first.start.localeCompare(second.start)),
+  }))
+  .filter(group => group.events.length > 0);
+
+const createWallpaperCanvas = (events) => {
   const canvas = document.createElement('canvas');
   canvas.width = WALLPAPER.width;
   canvas.height = WALLPAPER.height;
 
   const context = canvas.getContext('2d');
-  const gradient = context.createLinearGradient(0, 0, 0, canvas.height);
-  gradient.addColorStop(0, '#e2e8f0');
-  gradient.addColorStop(0.35, '#f8fafc');
-  gradient.addColorStop(1, '#ffffff');
+  const gradient = context.createLinearGradient(0, 0, canvas.width, canvas.height * 0.25);
+  gradient.addColorStop(0, '#ccffd8');
+  gradient.addColorStop(0.48, '#bce8eb');
+  gradient.addColorStop(1, '#91b4ff');
   context.fillStyle = gradient;
   context.fillRect(0, 0, canvas.width, canvas.height);
 
-  context.fillStyle = '#0f172a';
-  context.font = '700 74px system-ui, -apple-system, sans-serif';
+  const verticalGlow = context.createLinearGradient(0, 0, 0, canvas.height);
+  verticalGlow.addColorStop(0, 'rgba(255,255,255,0.22)');
+  verticalGlow.addColorStop(0.65, 'rgba(255,255,255,0.06)');
+  verticalGlow.addColorStop(1, 'rgba(255,255,255,0.28)');
+  context.fillStyle = verticalGlow;
+  context.fillRect(0, 0, canvas.width, canvas.height);
+
+  const groups = groupEventsByDay(events);
+  const activeDayNames = groups.map(group => group.day);
+  const sessionCount = groups.reduce((total, group) => total + group.events.length, 0);
+  const firstDay = activeDayNames[0] || 'Monday';
+  const lastDay = activeDayNames.at(-1) || 'Sunday';
+
+  context.fillStyle = '#10243d';
+  context.font = '500 82px system-ui, -apple-system, sans-serif';
   context.textAlign = 'center';
-  context.fillText('MY WEEKLY SCHEDULE', canvas.width / 2, 190);
+  context.fillText('WEEKLY SCHEDULE', canvas.width / 2, 134);
 
-  context.fillStyle = '#64748b';
-  context.font = '500 30px system-ui, -apple-system, sans-serif';
-  context.fillText('YOUR WEEK AT A GLANCE', canvas.width / 2, 248);
-
-  const availableWidth = canvas.width - WALLPAPER.padding * 2;
-  const availableHeight = canvas.height - 440;
-  const scale = Math.min(
-    availableWidth / scheduleCanvas.width,
-    availableHeight / scheduleCanvas.height,
+  context.fillStyle = 'rgba(16, 36, 61, 0.84)';
+  context.font = '700 25px system-ui, -apple-system, sans-serif';
+  context.letterSpacing = '2px';
+  context.fillText(
+    `IT COURSES · ${firstDay.toUpperCase()} TO ${lastDay.toUpperCase()} · 24-HOUR TIME`,
+    canvas.width / 2,
+    194,
   );
-  const drawWidth = scheduleCanvas.width * scale;
-  const drawHeight = scheduleCanvas.height * scale;
-  const x = (canvas.width - drawWidth) / 2;
-  const y = 340;
 
-  context.save();
-  context.shadowColor = 'rgba(15, 23, 42, 0.16)';
-  context.shadowBlur = 42;
-  context.shadowOffsetY = 16;
-  context.fillStyle = '#ffffff';
-  roundedRect(context, x - 18, y - 18, drawWidth + 36, drawHeight + 36, 28);
-  context.fill();
-  context.restore();
+  context.strokeStyle = 'rgba(16, 36, 61, 0.34)';
+  context.lineWidth = 2;
+  context.beginPath();
+  context.moveTo(520, 236);
+  context.lineTo(920, 236);
+  context.stroke();
 
-  context.drawImage(scheduleCanvas, x, y, drawWidth, drawHeight);
+  if (groups.length === 0) {
+    context.fillStyle = 'rgba(255,255,255,0.18)';
+    roundedRect(context, WALLPAPER.padding, 340, canvas.width - WALLPAPER.padding * 2, 360, 80);
+    context.fill();
+    context.strokeStyle = 'rgba(16, 36, 61, 0.38)';
+    context.stroke();
+    context.fillStyle = '#10243d';
+    context.font = '500 48px system-ui, -apple-system, sans-serif';
+    context.fillText('NO CLASSES YET', canvas.width / 2, 545);
+    return canvas;
+  }
+
+  const cardX = WALLPAPER.padding;
+  const cardWidth = canvas.width - WALLPAPER.padding * 2;
+  const cardsTop = 310;
+  const cardsBottom = 2690;
+  const cardGap = 26;
+  const cardPaddingY = 30;
+  const availableCardsHeight = cardsBottom - cardsTop;
+  const totalGap = (groups.length - 1) * cardGap;
+  const rowHeight = Math.max(
+    58,
+    Math.min(
+      146,
+      (availableCardsHeight - totalGap - groups.length * cardPaddingY * 2) / sessionCount,
+    ),
+  );
+  const cardsHeight = groups.reduce(
+    (total, group) => total + cardPaddingY * 2 + group.events.length * rowHeight,
+    0,
+  ) + totalGap;
+  const verticalOffset = Math.max(0, (availableCardsHeight - cardsHeight) / 2);
+  let cardY = cardsTop + verticalOffset;
+
+  groups.forEach((group, groupIndex) => {
+    const cardHeight = cardPaddingY * 2 + group.events.length * rowHeight;
+    const isFilled = groupIndex % 2 === 1;
+
+    roundedRect(context, cardX, cardY, cardWidth, cardHeight, 82);
+    if (isFilled) {
+      context.fillStyle = 'rgba(74, 116, 171, 0.13)';
+      context.fill();
+    } else {
+      context.strokeStyle = 'rgba(32, 70, 112, 0.42)';
+      context.lineWidth = 2.5;
+      context.stroke();
+    }
+
+    const dayColumnWidth = 226;
+    const contentX = cardX + dayColumnWidth + 36;
+    const contentRight = cardX + cardWidth - 42;
+    const timeWidth = 210;
+    const roomWidth = 150;
+    const subjectX = contentX + timeWidth;
+    const subjectWidth = contentRight - subjectX - roomWidth - 28;
+
+    context.strokeStyle = 'rgba(32, 70, 112, 0.18)';
+    context.lineWidth = 2;
+    context.beginPath();
+    context.moveTo(cardX + dayColumnWidth, cardY + 42);
+    context.lineTo(cardX + dayColumnWidth, cardY + cardHeight - 42);
+    context.stroke();
+
+    context.fillStyle = '#10243d';
+    context.font = '400 58px system-ui, -apple-system, sans-serif';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillText(
+      DAY_LABELS[group.day],
+      cardX + dayColumnWidth / 2,
+      cardY + cardHeight / 2,
+    );
+
+    group.events.forEach((event, eventIndex) => {
+      const rowTop = cardY + cardPaddingY + eventIndex * rowHeight;
+      const rowCenter = rowTop + rowHeight / 2;
+      const compact = rowHeight < 92;
+
+      if (eventIndex > 0) {
+        context.strokeStyle = 'rgba(32, 70, 112, 0.10)';
+        context.lineWidth = 1.5;
+        context.beginPath();
+        context.moveTo(contentX, rowTop);
+        context.lineTo(contentRight, rowTop);
+        context.stroke();
+      }
+
+      context.fillStyle = '#17304d';
+      context.textAlign = 'left';
+      context.textBaseline = 'middle';
+      context.font = `700 ${compact ? 23 : 27}px system-ui, -apple-system, sans-serif`;
+      context.fillText(`${event.start}–${event.end}`, contentX + 8, rowCenter);
+
+      context.font = `700 ${compact ? 27 : 33}px system-ui, -apple-system, sans-serif`;
+      context.fillText(
+        fitText(context, event.subject, subjectWidth),
+        subjectX,
+        rowCenter - (compact ? 11 : 18),
+      );
+
+      context.fillStyle = 'rgba(23, 48, 77, 0.84)';
+      context.font = `700 ${compact ? 17 : 20}px system-ui, -apple-system, sans-serif`;
+      context.fillText(
+        fitText(context, String(event.description || '').toUpperCase(), subjectWidth),
+        subjectX,
+        rowCenter + (compact ? 15 : 19),
+      );
+
+      context.fillStyle = '#17304d';
+      context.font = `700 ${compact ? 22 : 27}px system-ui, -apple-system, sans-serif`;
+      context.textAlign = 'right';
+      context.fillText(
+        fitText(context, event.room || '—', roomWidth),
+        contentRight,
+        rowCenter,
+      );
+    });
+
+    cardY += cardHeight + cardGap;
+  });
+
+  const footerY = 2812;
+  const daySummary = groups.map(group => DAY_LABELS[group.day].toUpperCase()).join(' · ');
+  const rooms = [...new Set(
+    events.map(event => event.room?.trim()).filter(Boolean),
+  )];
+
+  context.fillStyle = 'rgba(16, 36, 61, 0.72)';
+  context.textBaseline = 'alphabetic';
+  context.font = '700 22px system-ui, -apple-system, sans-serif';
+  context.textAlign = 'left';
+  context.fillText(`${groups.length} STUDY DAYS`, 88, footerY);
+  context.textAlign = 'center';
+  context.fillText(`${sessionCount} CLASS SESSIONS`, canvas.width / 2, footerY);
+  context.textAlign = 'right';
+  context.fillText(daySummary, canvas.width - 88, footerY);
+
+  context.strokeStyle = 'rgba(32, 70, 112, 0.14)';
+  context.lineWidth = 2;
+  context.beginPath();
+  context.moveTo(88, footerY + 42);
+  context.lineTo(canvas.width - 88, footerY + 42);
+  context.stroke();
+
+  context.textAlign = 'left';
+  context.fillText('ROOMS', 88, footerY + 108);
+  context.fillText(
+    fitText(context, rooms.join(' · ') || '—', canvas.width - 270),
+    238,
+    footerY + 108,
+  );
 
   return canvas;
 };
@@ -233,20 +428,19 @@ const createPdfBlob = (canvas) => {
   return new Blob([concatBytes(...chunks)], { type: 'application/pdf' });
 };
 
-export const exportSchedule = async (element, format) => {
-  if (!element) {
-    throw new Error('The schedule is not ready to export.');
-  }
-
-  const scheduleCanvas = await elementToCanvas(element);
-
+export const exportSchedule = async (element, format, events = []) => {
   if (format === 'a4') {
+    if (!element) {
+      throw new Error('The schedule is not ready to export.');
+    }
+    const scheduleCanvas = await elementToCanvas(element);
     downloadBlob(createPdfBlob(scheduleCanvas), 'weekly-schedule-a4.pdf');
     return;
   }
 
   if (format === 'wallpaper') {
-    const wallpaperCanvas = createWallpaperCanvas(scheduleCanvas);
+    await waitForFonts();
+    const wallpaperCanvas = createWallpaperCanvas(events);
     const blob = await canvasToBlob(wallpaperCanvas, 'image/jpeg', 0.94);
     downloadBlob(blob, 'weekly-schedule-wallpaper.jpg');
     return;

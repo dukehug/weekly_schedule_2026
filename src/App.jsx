@@ -107,7 +107,7 @@ const App = () => {
     setPrintError('');
 
     try {
-      await exportSchedule(scheduleRef.current, format);
+      await exportSchedule(scheduleRef.current, format, events);
       setIsPrintModalOpen(false);
     } catch (error) {
       setPrintError(error instanceof Error ? error.message : 'Unable to export the schedule.');
@@ -450,7 +450,7 @@ const App = () => {
                   <Smartphone size={22} />
                 </span>
                 <span className="block font-semibold text-gray-900">Phone wallpaper</span>
-                <span className="block text-sm text-gray-500 mt-1">1440 × 3200 · JPG</span>
+                <span className="block text-sm text-gray-500 mt-1">1440 × 3120 · JPG</span>
               </button>
             </div>
 
