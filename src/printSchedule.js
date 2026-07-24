@@ -88,6 +88,19 @@ const groupEventsByDay = (events) => DAY_ORDER
   }))
   .filter(group => group.events.length > 0);
 
+const getScheduleSummary = (events) => {
+  const groups = groupEventsByDay(events);
+
+  return {
+    groups,
+    sessionCount: groups.reduce((total, group) => total + group.events.length, 0),
+    daySummary: groups.map(group => DAY_LABELS[group.day].toUpperCase()).join(' · ') || '—',
+    rooms: [...new Set(
+      events.map(event => event.room?.trim()).filter(Boolean),
+    )],
+  };
+};
+
 const EVENT_PALETTES = [
   { token: 'blue', fill: '#dbeafe', border: '#60a5fa', text: '#1e3a8a' },
   { token: 'green', fill: '#dcfce7', border: '#4ade80', text: '#14532d' },
@@ -117,6 +130,12 @@ const createA4ScheduleCanvas = (events) => {
   canvas.height = A4_CANVAS.height;
 
   const context = canvas.getContext('2d');
+  const {
+    groups,
+    sessionCount,
+    daySummary,
+    rooms,
+  } = getScheduleSummary(events);
   context.fillStyle = '#ffffff';
   context.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -136,9 +155,24 @@ const createA4ScheduleCanvas = (events) => {
   context.textBaseline = 'alphabetic';
   context.fillText('MY WEEKLY SCHEDULE', gridX, 105);
 
+  context.fillStyle = '#475569';
+  context.font = '700 24px system-ui, -apple-system, sans-serif';
+  context.fillText(`${groups.length} - STUDY DAYS`, gridX, 153);
+  context.textAlign = 'center';
+  context.fillText(`${sessionCount} - CLASS SESSIONS`, canvas.width / 2, 153);
+  context.textAlign = 'right';
+  context.fillText(daySummary, gridX + gridWidth, 153);
+
   context.fillStyle = '#64748b';
-  context.font = '500 25px system-ui, -apple-system, sans-serif';
-  context.fillText('A4 · LANDSCAPE · 24-HOUR TIME', gridX, 153);
+  context.font = '700 20px system-ui, -apple-system, sans-serif';
+  context.textAlign = 'left';
+  context.fillText('ROOMS', gridX, 194);
+  context.font = '600 20px system-ui, -apple-system, sans-serif';
+  context.fillText(
+    fitText(context, rooms.join(' · ') || '—', gridWidth - 110),
+    gridX + 110,
+    194,
+  );
 
   context.fillStyle = '#f8fafc';
   context.fillRect(gridX, gridY, gridWidth, headerHeight);
@@ -270,9 +304,13 @@ const createWallpaperCanvas = (events) => {
   context.fillStyle = verticalGlow;
   context.fillRect(0, 0, canvas.width, canvas.height);
 
-  const groups = groupEventsByDay(events);
+  const {
+    groups,
+    sessionCount,
+    daySummary,
+    rooms,
+  } = getScheduleSummary(events);
   const activeDayNames = groups.map(group => group.day);
-  const sessionCount = groups.reduce((total, group) => total + group.events.length, 0);
   const firstDay = activeDayNames[0] || 'Monday';
   const lastDay = activeDayNames.at(-1) || 'Sunday';
 
@@ -419,18 +457,14 @@ const createWallpaperCanvas = (events) => {
   });
 
   const footerY = 2812;
-  const daySummary = groups.map(group => DAY_LABELS[group.day].toUpperCase()).join(' · ');
-  const rooms = [...new Set(
-    events.map(event => event.room?.trim()).filter(Boolean),
-  )];
 
   context.fillStyle = 'rgba(16, 36, 61, 0.72)';
   context.textBaseline = 'alphabetic';
   context.font = '700 22px system-ui, -apple-system, sans-serif';
   context.textAlign = 'left';
-  context.fillText(`${groups.length} STUDY DAYS`, 88, footerY);
+  context.fillText(`${groups.length} - STUDY DAYS`, 88, footerY);
   context.textAlign = 'center';
-  context.fillText(`${sessionCount} CLASS SESSIONS`, canvas.width / 2, footerY);
+  context.fillText(`${sessionCount} - CLASS SESSIONS`, canvas.width / 2, footerY);
   context.textAlign = 'right';
   context.fillText(daySummary, canvas.width - 88, footerY);
 
