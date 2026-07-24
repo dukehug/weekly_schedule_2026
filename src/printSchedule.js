@@ -10,6 +10,14 @@ const WALLPAPER = {
   padding: 54,
 };
 
+const A4_CANVAS = {
+  width: 3508,
+  height: 2480,
+  padding: 110,
+  startHour: 7,
+  endHour: 22,
+};
+
 const DAY_ORDER = [
   'Monday',
   'Tuesday',
@@ -33,82 +41,6 @@ const DAY_LABELS = {
 const waitForFonts = async () => {
   if (document.fonts?.ready) {
     await document.fonts.ready;
-  }
-};
-
-const copyComputedStyles = (source, clone) => {
-  const sourceElements = [source, ...source.querySelectorAll('*')];
-  const cloneElements = [clone, ...clone.querySelectorAll('*')];
-
-  sourceElements.forEach((sourceElement, index) => {
-    const cloneElement = cloneElements[index];
-    if (!cloneElement) return;
-
-    const styles = window.getComputedStyle(sourceElement);
-    for (const property of styles) {
-      cloneElement.style.setProperty(
-        property,
-        styles.getPropertyValue(property),
-        styles.getPropertyPriority(property),
-      );
-    }
-
-    cloneElement.style.animation = 'none';
-    cloneElement.style.transition = 'none';
-  });
-};
-
-const elementToCanvas = async (element, pixelRatio = 2) => {
-  await waitForFonts();
-
-  const width = Math.ceil(element.scrollWidth);
-  const height = Math.ceil(element.scrollHeight);
-  const clone = element.cloneNode(true);
-
-  copyComputedStyles(element, clone);
-  clone.style.width = `${width}px`;
-  clone.style.height = `${height}px`;
-  clone.style.maxWidth = 'none';
-  clone.style.overflow = 'visible';
-  clone.style.margin = '0';
-
-  const wrapper = document.createElement('div');
-  wrapper.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
-  wrapper.style.width = `${width}px`;
-  wrapper.style.height = `${height}px`;
-  wrapper.style.background = '#ffffff';
-  wrapper.appendChild(clone);
-
-  const serialized = new XMLSerializer().serializeToString(wrapper);
-  const svg = [
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
-    `<foreignObject width="100%" height="100%">${serialized}</foreignObject>`,
-    '</svg>',
-  ].join('');
-
-  const imageUrl = URL.createObjectURL(
-    new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }),
-  );
-
-  try {
-    const image = new Image();
-    image.decoding = 'async';
-    image.src = imageUrl;
-    await image.decode();
-
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.round(width * pixelRatio);
-    canvas.height = Math.round(height * pixelRatio);
-
-    const context = canvas.getContext('2d');
-    context.scale(pixelRatio, pixelRatio);
-    context.fillStyle = '#ffffff';
-    context.fillRect(0, 0, width, height);
-    context.drawImage(image, 0, 0, width, height);
-
-    return canvas;
-  } finally {
-    URL.revokeObjectURL(imageUrl);
   }
 };
 
@@ -155,6 +87,168 @@ const groupEventsByDay = (events) => DAY_ORDER
       .sort((first, second) => first.start.localeCompare(second.start)),
   }))
   .filter(group => group.events.length > 0);
+
+const EVENT_PALETTES = [
+  { token: 'blue', fill: '#dbeafe', border: '#60a5fa', text: '#1e3a8a' },
+  { token: 'green', fill: '#dcfce7', border: '#4ade80', text: '#14532d' },
+  { token: 'purple', fill: '#f3e8ff', border: '#c084fc', text: '#581c87' },
+  { token: 'yellow', fill: '#fef9c3', border: '#facc15', text: '#713f12' },
+  { token: 'red', fill: '#fee2e2', border: '#f87171', text: '#7f1d1d' },
+  { token: 'indigo', fill: '#e0e7ff', border: '#818cf8', text: '#312e81' },
+  { token: 'pink', fill: '#fce7f3', border: '#f472b6', text: '#831843' },
+  { token: 'orange', fill: '#ffedd5', border: '#fb923c', text: '#7c2d12' },
+  { token: 'teal', fill: '#ccfbf1', border: '#2dd4bf', text: '#134e4a' },
+  { token: 'slate', fill: '#e2e8f0', border: '#64748b', text: '#0f172a' },
+];
+
+const paletteForEvent = (event) => (
+  EVENT_PALETTES.find(palette => event.color?.includes(`-${palette.token}-`))
+  || EVENT_PALETTES.at(-1)
+);
+
+const timeToMinutes = (time) => {
+  const [hours, minutes] = String(time || '00:00').split(':').map(Number);
+  return hours * 60 + minutes;
+};
+
+const createA4ScheduleCanvas = (events) => {
+  const canvas = document.createElement('canvas');
+  canvas.width = A4_CANVAS.width;
+  canvas.height = A4_CANVAS.height;
+
+  const context = canvas.getContext('2d');
+  context.fillStyle = '#ffffff';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+
+  const gridX = A4_CANVAS.padding;
+  const gridY = 220;
+  const gridWidth = canvas.width - A4_CANVAS.padding * 2;
+  const timeColumnWidth = 160;
+  const headerHeight = 105;
+  const bodyHeight = canvas.height - gridY - 105;
+  const dayWidth = (gridWidth - timeColumnWidth) / DAY_ORDER.length;
+  const bodyY = gridY + headerHeight;
+  const totalMinutes = (A4_CANVAS.endHour - A4_CANVAS.startHour) * 60;
+
+  context.fillStyle = '#111827';
+  context.font = '700 55px system-ui, -apple-system, sans-serif';
+  context.textAlign = 'left';
+  context.textBaseline = 'alphabetic';
+  context.fillText('MY WEEKLY SCHEDULE', gridX, 105);
+
+  context.fillStyle = '#64748b';
+  context.font = '500 25px system-ui, -apple-system, sans-serif';
+  context.fillText('A4 · LANDSCAPE · 24-HOUR TIME', gridX, 153);
+
+  context.fillStyle = '#f8fafc';
+  context.fillRect(gridX, gridY, gridWidth, headerHeight);
+
+  context.strokeStyle = '#d6dce5';
+  context.lineWidth = 2;
+  context.strokeRect(gridX, gridY, gridWidth, headerHeight + bodyHeight);
+
+  context.fillStyle = '#64748b';
+  context.font = '700 23px system-ui, -apple-system, sans-serif';
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+  context.fillText('TIME', gridX + timeColumnWidth / 2, gridY + headerHeight / 2);
+
+  DAY_ORDER.forEach((day, index) => {
+    const x = gridX + timeColumnWidth + index * dayWidth;
+    context.fillStyle = '#334155';
+    context.font = '700 26px system-ui, -apple-system, sans-serif';
+    context.fillText(day.toUpperCase(), x + dayWidth / 2, gridY + headerHeight / 2);
+
+    context.strokeStyle = '#d6dce5';
+    context.beginPath();
+    context.moveTo(x, gridY);
+    context.lineTo(x, gridY + headerHeight + bodyHeight);
+    context.stroke();
+  });
+
+  const hourHeight = bodyHeight / (A4_CANVAS.endHour - A4_CANVAS.startHour);
+  for (let hour = A4_CANVAS.startHour; hour <= A4_CANVAS.endHour; hour += 1) {
+    const y = bodyY + (hour - A4_CANVAS.startHour) * hourHeight;
+
+    context.strokeStyle = hour === A4_CANVAS.endHour ? '#d6dce5' : '#e8ecf1';
+    context.beginPath();
+    context.moveTo(gridX, y);
+    context.lineTo(gridX + gridWidth, y);
+    context.stroke();
+
+    if (hour < A4_CANVAS.endHour) {
+      context.fillStyle = '#64748b';
+      context.font = '600 20px system-ui, -apple-system, sans-serif';
+      context.textAlign = 'center';
+      context.textBaseline = 'top';
+      context.fillText(`${String(hour).padStart(2, '0')}:00`, gridX + timeColumnWidth / 2, y + 10);
+    }
+  }
+
+  events.forEach((event) => {
+    const dayIndex = DAY_ORDER.indexOf(event.day);
+    if (dayIndex < 0) return;
+
+    const start = Math.max(
+      A4_CANVAS.startHour * 60,
+      timeToMinutes(event.start),
+    );
+    const end = Math.min(
+      A4_CANVAS.endHour * 60,
+      timeToMinutes(event.end),
+    );
+    if (end <= start) return;
+
+    const x = gridX + timeColumnWidth + dayIndex * dayWidth + 7;
+    const y = bodyY + ((start - A4_CANVAS.startHour * 60) / totalMinutes) * bodyHeight + 4;
+    const width = dayWidth - 14;
+    const height = Math.max(22, ((end - start) / totalMinutes) * bodyHeight - 8);
+    const palette = paletteForEvent(event);
+    const compact = height < 88;
+    const veryCompact = height < 54;
+
+    roundedRect(context, x, y, width, height, 12);
+    context.fillStyle = palette.fill;
+    context.fill();
+
+    context.fillStyle = palette.border;
+    context.fillRect(x, y + 7, 8, Math.max(8, height - 14));
+
+    context.save();
+    context.beginPath();
+    context.rect(x + 15, y + 4, width - 22, height - 8);
+    context.clip();
+
+    context.fillStyle = palette.text;
+    context.textAlign = 'left';
+    context.textBaseline = 'top';
+    context.font = `700 ${veryCompact ? 23 : compact ? 27 : 34}px system-ui, -apple-system, sans-serif`;
+    context.fillText(fitText(context, event.subject, width - 34), x + 21, y + (veryCompact ? 7 : 12));
+
+    if (!veryCompact) {
+      context.globalAlpha = 0.84;
+      context.font = `600 ${compact ? 17 : 21}px system-ui, -apple-system, sans-serif`;
+      context.fillText(
+        fitText(context, event.description || '', width - 34),
+        x + 21,
+        y + (compact ? 48 : 56),
+      );
+    }
+
+    if (!compact) {
+      context.globalAlpha = 0.72;
+      context.font = '600 18px system-ui, -apple-system, sans-serif';
+      context.fillText(
+        fitText(context, `${event.start}–${event.end} · ${event.room || '—'}`, width - 34),
+        x + 21,
+        y + height - 34,
+      );
+    }
+    context.restore();
+  });
+
+  return canvas;
+};
 
 const createWallpaperCanvas = (events) => {
   const canvas = document.createElement('canvas');
@@ -428,12 +522,10 @@ const createPdfBlob = (canvas) => {
   return new Blob([concatBytes(...chunks)], { type: 'application/pdf' });
 };
 
-export const exportSchedule = async (element, format, events = []) => {
+export const exportSchedule = async (format, events = []) => {
   if (format === 'a4') {
-    if (!element) {
-      throw new Error('The schedule is not ready to export.');
-    }
-    const scheduleCanvas = await elementToCanvas(element);
+    await waitForFonts();
+    const scheduleCanvas = createA4ScheduleCanvas(events);
     downloadBlob(createPdfBlob(scheduleCanvas), 'weekly-schedule-a4.pdf');
     return;
   }

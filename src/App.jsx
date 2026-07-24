@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { Save, Download, Plus, X, Trash2, Clock, MapPin, Calendar, CheckSquare, Check, RotateCcw, Upload, FileText, Smartphone, LoaderCircle } from 'lucide-react';
 import { parseImportedSchedule } from './importSchedule';
 import { exportSchedule } from './printSchedule';
@@ -83,8 +83,7 @@ const App = () => {
   const [isContinuous, setIsContinuous] = useState(false);
   const [selectedDays, setSelectedDays] = useState([]);
   const [selectedColor, setSelectedColor] = useState(COLOR_OPTIONS[0].value);
-
-  const scheduleRef = useRef(null);
+  const scheduleHeaderRef = useRef(null);
 
   const saveSchedule = () => {
     localStorage.setItem('mySchedule', JSON.stringify(events));
@@ -107,7 +106,7 @@ const App = () => {
     setPrintError('');
 
     try {
-      await exportSchedule(scheduleRef.current, format, events);
+      await exportSchedule(format, events);
       setIsPrintModalOpen(false);
     } catch (error) {
       setPrintError(error instanceof Error ? error.message : 'Unable to export the schedule.');
@@ -235,6 +234,12 @@ const App = () => {
       gridTemplateColumns: '80px repeat(7, 1fr)' 
   };
 
+  const syncScheduleHeader = (event) => {
+    if (scheduleHeaderRef.current) {
+      scheduleHeaderRef.current.style.transform = `translateX(-${event.currentTarget.scrollLeft}px)`;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-6 font-sans text-gray-900 print:bg-white print:p-0">
       
@@ -269,13 +274,14 @@ const App = () => {
       </div>
 
       {/* Main Schedule Grid */}
-      <div className="max-w-full mx-auto bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden print:shadow-none print:w-full">
-        <div className="overflow-x-auto">
-          {/* 增加 min-w 以容納 7 天 */}
-          <div className="min-w-[1000px] relative" ref={scheduleRef}>
-            
-            {/* Header Row (Days) */}
-            <div style={gridStyle} className="border-b border-gray-200 bg-gray-50 sticky top-0 z-10">
+      <div className="max-w-full mx-auto bg-white rounded-lg border border-gray-200 shadow-sm print:shadow-none print:w-full">
+        {/* Sticky Header Row (Days) */}
+        <div className="sticky top-0 z-30 overflow-hidden rounded-t-lg bg-gray-50 shadow-[0_1px_0_0_#e5e7eb] print:static print:shadow-none">
+          <div
+            ref={scheduleHeaderRef}
+            style={gridStyle}
+            className="min-w-[1000px] bg-gray-50 will-change-transform"
+          >
               <div className="p-4 border-r border-gray-200 text-center text-gray-400 font-medium text-sm flex items-center justify-center">
                 Time / Day
               </div>
@@ -284,8 +290,12 @@ const App = () => {
                   {day}
                 </div>
               ))}
-            </div>
+          </div>
+        </div>
 
+        <div className="overflow-x-auto rounded-b-lg" onScroll={syncScheduleHeader}>
+          {/* 增加 min-w 以容納 7 天 */}
+          <div className="min-w-[1000px] relative">
             {/* Grid Body */}
             <div
               className="relative"
