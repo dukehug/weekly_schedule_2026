@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Save, Download, Plus, X, Trash2, Clock, MapPin, Calendar, CheckSquare, Check, RotateCcw, Upload, FileText, Smartphone, LoaderCircle } from 'lucide-react';
 import { parseImportedSchedule } from './importSchedule';
-import { exportSchedule } from './printSchedule';
+import { exportSchedule, WALLPAPER_THEMES } from './printSchedule';
 import { trackEvent } from './analytics';
 
 const LEGACY_GRAY_COLOR = 'bg-gray-100 border-gray-300 text-gray-800';
@@ -71,6 +71,7 @@ const App = () => {
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [printError, setPrintError] = useState('');
+  const [wallpaperTheme, setWallpaperTheme] = useState(WALLPAPER_THEMES[0].id);
   const [importText, setImportText] = useState('');
   const [importError, setImportError] = useState('');
   const [editingEvent, setEditingEvent] = useState(null);
@@ -102,9 +103,10 @@ const App = () => {
     setPrintError('');
 
     try {
-      await exportSchedule(format, events);
+      await exportSchedule(format, events, { wallpaperTheme });
       trackEvent('export_schedule', {
         export_format: format,
+        ...(format === 'wallpaper' ? { wallpaper_theme: wallpaperTheme } : {}),
         session_count: events.length,
       });
       setIsPrintModalOpen(false);
@@ -269,7 +271,7 @@ const App = () => {
             <Upload size={18} /> Import
           </button>
           <button onClick={saveSchedule} className="flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-700 px-3.5 py-2 rounded-md border border-gray-300 transition-colors">
-            <Save size={18} /> Save Settings
+            <Save size={18} /> Save
           </button>
           <button onClick={openPrintModal} className="flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-700 px-3.5 py-2 rounded-md border border-gray-300 transition-colors">
             <Download size={18} /> Print
@@ -469,6 +471,46 @@ const App = () => {
                 <span className="block font-semibold text-gray-900">Phone wallpaper</span>
                 <span className="block text-sm text-gray-500 mt-1">1440 × 3120 · JPG</span>
               </button>
+
+              <fieldset className="sm:col-span-2 mt-2">
+                <legend className="text-sm font-medium text-gray-700">Wallpaper background</legend>
+                <p className="text-xs text-gray-500 mt-1 mb-3">
+                  Curated from{' '}
+                  <a
+                    href="https://uigradients.com/"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline underline-offset-2 hover:text-gray-800"
+                  >
+                    uiGradients
+                  </a>
+                  {' '}for clear, dark schedule text.
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                  {WALLPAPER_THEMES.map(theme => (
+                    <button
+                      key={theme.id}
+                      type="button"
+                      onClick={() => setWallpaperTheme(theme.id)}
+                      disabled={isExporting}
+                      aria-pressed={wallpaperTheme === theme.id}
+                      className={`rounded-lg border p-1.5 text-left transition focus:outline-none focus:ring-2 focus:ring-gray-400 disabled:opacity-50 ${
+                        wallpaperTheme === theme.id
+                          ? 'border-gray-800 ring-1 ring-gray-800'
+                          : 'border-gray-200 hover:border-gray-400'
+                      }`}
+                    >
+                      <span
+                        className="block h-10 rounded-md border border-black/5"
+                        style={{ background: `linear-gradient(135deg, ${theme.colors.join(', ')})` }}
+                      />
+                      <span className="mt-1.5 block truncate text-[11px] font-medium text-gray-700">
+                        {theme.name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
             </div>
 
             {(isExporting || printError) && (
@@ -586,8 +628,8 @@ const App = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Course code</label>
-                    <input name="subject" defaultValue={editingEvent?.subject} required className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-gray-400 focus:border-gray-500 outline-none transition" placeholder="e.g. IT226" />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Course code / Section</label>
+                    <input name="subject" defaultValue={editingEvent?.subject} required className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-gray-400 focus:border-gray-500 outline-none transition" placeholder="e.g. IT226 or 29082" />
                 </div>
                 <div className="col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Subject Name / Description</label>

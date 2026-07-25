@@ -10,6 +10,36 @@ const WALLPAPER = {
   padding: 54,
 };
 
+// Curated from uiGradients. These light backgrounds intentionally share a
+// dark foreground palette so every export remains comfortably readable.
+export const WALLPAPER_THEMES = [
+  {
+    id: 'windy',
+    name: 'Windy',
+    colors: ['#acb6e5', '#86fde8'],
+  },
+  {
+    id: 'moonrise',
+    name: 'Moonrise',
+    colors: ['#dae2f8', '#d6a4a4'],
+  },
+  {
+    id: 'sea-blizz',
+    name: 'Sea Blizz',
+    colors: ['#1cd8d2', '#93edc7'],
+  },
+  {
+    id: 'friday',
+    name: 'Friday',
+    colors: ['#83a4d4', '#b6fbff'],
+  },
+  {
+    id: 'mango',
+    name: 'Mango',
+    colors: ['#ffe259', '#ffa751'],
+  },
+];
+
 const A4_CANVAS = {
   width: 3508,
   height: 2480,
@@ -284,16 +314,18 @@ const createA4ScheduleCanvas = (events) => {
   return canvas;
 };
 
-const createWallpaperCanvas = (events) => {
+const createWallpaperCanvas = (events, themeId) => {
   const canvas = document.createElement('canvas');
   canvas.width = WALLPAPER.width;
   canvas.height = WALLPAPER.height;
 
   const context = canvas.getContext('2d');
+  const theme = WALLPAPER_THEMES.find(candidate => candidate.id === themeId)
+    || WALLPAPER_THEMES[0];
   const gradient = context.createLinearGradient(0, 0, canvas.width, canvas.height * 0.25);
-  gradient.addColorStop(0, '#ccffd8');
-  gradient.addColorStop(0.48, '#bce8eb');
-  gradient.addColorStop(1, '#91b4ff');
+  theme.colors.forEach((color, index) => {
+    gradient.addColorStop(index / (theme.colors.length - 1), color);
+  });
   context.fillStyle = gradient;
   context.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -556,7 +588,7 @@ const createPdfBlob = (canvas) => {
   return new Blob([concatBytes(...chunks)], { type: 'application/pdf' });
 };
 
-export const exportSchedule = async (format, events = []) => {
+export const exportSchedule = async (format, events = [], options = {}) => {
   if (format === 'a4') {
     await waitForFonts();
     const scheduleCanvas = createA4ScheduleCanvas(events);
@@ -566,7 +598,7 @@ export const exportSchedule = async (format, events = []) => {
 
   if (format === 'wallpaper') {
     await waitForFonts();
-    const wallpaperCanvas = createWallpaperCanvas(events);
+    const wallpaperCanvas = createWallpaperCanvas(events, options.wallpaperTheme);
     const blob = await canvasToBlob(wallpaperCanvas, 'image/jpeg', 0.94);
     downloadBlob(blob, 'weekly-schedule-wallpaper.jpg');
     return;

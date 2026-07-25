@@ -1,14 +1,29 @@
 const DAY_NAMES = {
   M: 'Monday',
+  MON: 'Monday',
+  MONDAY: 'Monday',
   T: 'Tuesday',
+  TUE: 'Tuesday',
+  TUES: 'Tuesday',
+  TUESDAY: 'Tuesday',
   W: 'Wednesday',
+  WED: 'Wednesday',
+  WEDNESDAY: 'Wednesday',
   TH: 'Thursday',
+  THU: 'Thursday',
+  THUR: 'Thursday',
+  THURS: 'Thursday',
+  THURSDAY: 'Thursday',
   F: 'Friday',
+  FRI: 'Friday',
+  FRIDAY: 'Friday',
   SAT: 'Saturday',
+  SATURDAY: 'Saturday',
   SUN: 'Sunday',
+  SUNDAY: 'Sunday',
 };
 
-const DAY_CODES = ['SUN', 'SAT', 'TH', 'M', 'T', 'W', 'F'];
+const DAY_CODES = Object.keys(DAY_NAMES).sort((first, second) => second.length - first.length);
 
 const IMPORT_COLORS = [
   'bg-blue-100 border-blue-300 text-blue-800',
@@ -121,7 +136,7 @@ export const parseImportedSchedule = (rawText, idSeed = Date.now()) => {
 
     const [, subjectValue, descriptionValue] = subjectMatch;
     const [, dayCodes, startValue, endValue, roomValue] = scheduleMatch;
-    const subject = subjectValue.trim();
+    const courseCode = subjectValue.trim();
     const start = normalizeTime(startValue);
     const end = normalizeTime(endValue);
 
@@ -130,12 +145,12 @@ export const parseImportedSchedule = (rawText, idSeed = Date.now()) => {
     }
 
     const eventBase = {
-      subject,
+      subject: record.section,
       description: normalizeDescription(descriptionValue),
       room: roomValue.trim(),
       start,
       end,
-      color: colorForCourse(subject, colorByCourse),
+      color: colorForCourse(courseCode, colorByCourse),
     };
 
     return parseDays(dayCodes).map(day => ({
