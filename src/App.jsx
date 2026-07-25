@@ -1,8 +1,14 @@
-import React, { useRef, useState } from 'react';
-import { Save, Download, Plus, X, Trash2, Clock, MapPin, Calendar, CheckSquare, Check, RotateCcw, Upload, FileText, Smartphone, LoaderCircle } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Save, Download, Plus, X, Trash2, Clock, MapPin, Calendar, CheckSquare, Check, RotateCcw, Upload, FileText, Smartphone, LoaderCircle, ImagePlus } from 'lucide-react';
 import { parseImportedSchedule } from './importSchedule';
 import { exportSchedule, WALLPAPER_THEMES } from './printSchedule';
 import { trackEvent } from './analytics';
+import {
+  BACKGROUND_PICTURE_ACCEPT,
+  createBackgroundPicture,
+  DEFAULT_BACKGROUND_OVERLAY_OPACITY,
+  releaseBackgroundPicture,
+} from './backgroundPicture';
 
 const LEGACY_GRAY_COLOR = 'bg-gray-100 border-gray-300 text-gray-800';
 const SLATE_COLOR = 'bg-slate-200 border-slate-500 text-slate-900';
@@ -69,9 +75,15 @@ const App = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  const [isBackgroundModalOpen, setIsBackgroundModalOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [printError, setPrintError] = useState('');
   const [wallpaperTheme, setWallpaperTheme] = useState(WALLPAPER_THEMES[0].id);
+  const [backgroundPicture, setBackgroundPicture] = useState(null);
+  const [backgroundOverlayOpacity, setBackgroundOverlayOpacity] = useState(
+    DEFAULT_BACKGROUND_OVERLAY_OPACITY,
+  );
+  const [backgroundPictureError, setBackgroundPictureError] = useState('');
   const [importText, setImportText] = useState('');
   const [importError, setImportError] = useState('');
   const [editingEvent, setEditingEvent] = useState(null);
@@ -80,6 +92,12 @@ const App = () => {
   const [selectedDays, setSelectedDays] = useState([]);
   const [selectedColor, setSelectedColor] = useState(COLOR_OPTIONS[0].value);
   const scheduleHeaderRef = useRef(null);
+  const backgroundFileInputRef = useRef(null);
+
+  // Release browser-only preview URLs when a picture is replaced or the app closes.
+  useEffect(() => (
+    () => releaseBackgroundPicture(backgroundPicture)
+  ), [backgroundPicture]);
 
   const saveSchedule = () => {
     localStorage.setItem('mySchedule', JSON.stringify(events));
@@ -103,10 +121,16 @@ const App = () => {
     setPrintError('');
 
     try {
-      await exportSchedule(format, events, { wallpaperTheme });
+      await exportSchedule(format, events, {
+        wallpaperTheme,
+        backgroundPictureFile: backgroundPicture?.file,
+        backgroundOverlayOpacity,
+      });
       trackEvent('export_schedule', {
         export_format: format,
-        ...(format === 'wallpaper' ? { wallpaper_theme: wallpaperTheme } : {}),
+        ...(format === 'wallpaper'
+          ? { wallpaper_background: backgroundPicture ? 'custom' : wallpaperTheme }
+          : {}),
         session_count: events.length,
       });
       setIsPrintModalOpen(false);
@@ -115,6 +139,36 @@ const App = () => {
     } finally {
       setIsExporting(false);
     }
+  };
+
+  const openBackgroundModal = () => {
+    setBackgroundPictureError('');
+    setIsBackgroundModalOpen(true);
+  };
+
+  const handleBackgroundPictureChange = (event) => {
+    const [file] = event.target.files;
+    if (!file) return;
+
+    try {
+      setBackgroundPicture(createBackgroundPicture(file));
+      setBackgroundPictureError('');
+      trackEvent('set_wallpaper_background', { picture_type: file.type });
+    } catch (error) {
+      setBackgroundPictureError(
+        error instanceof Error ? error.message : 'Unable to use this picture.',
+      );
+    } finally {
+      // Reset so the same file can be selected again after it is cleared.
+      event.target.value = '';
+    }
+  };
+
+  const clearBackgroundPicture = () => {
+    setBackgroundPicture(null);
+    setBackgroundOverlayOpacity(DEFAULT_BACKGROUND_OVERLAY_OPACITY);
+    setBackgroundPictureError('');
+    trackEvent('clear_wallpaper_background');
   };
 
   const openImportModal = () => {
@@ -257,10 +311,10 @@ const App = () => {
         <div>
             <h1 className="text-2xl font-semibold tracking-tight text-gray-900 flex items-center gap-2">
                 <Calendar className="w-6 h-6 text-gray-600"/>
-                My Weekly Schedule 
+                My Weekly Schedule
             </h1>
             <p className="text-sm text-gray-500 mt-1">
-              Plan your week at a glance. Star on  <a className="text-gray-700 underline underline-offset-2 hover:text-gray-950" href="https://github.com/dukehug/weekly_schedule_2026" target="_blank" >GitHub</a>.
+              Plan your week at a glance.  At   <a className="text-gray-700 underline underline-offset-2 hover:text-gray-950" href="https://weekly.52hz.im" target="_blank" >https://weekly.52hz.im</a>
             </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -272,6 +326,9 @@ const App = () => {
           </button>
           <button onClick={saveSchedule} className="flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-700 px-3.5 py-2 rounded-md border border-gray-300 transition-colors">
             <Save size={18} /> Save
+          </button>
+          <button onClick={openBackgroundModal} className="flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-700 px-3.5 py-2 rounded-md border border-gray-300 transition-colors">
+            <ImagePlus size={18} /> Set bg-pic
           </button>
           <button onClick={openPrintModal} className="flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-700 px-3.5 py-2 rounded-md border border-gray-300 transition-colors">
             <Download size={18} /> Print
@@ -415,6 +472,121 @@ const App = () => {
         </div>
       </div>
 
+      {/* Local wallpaper background dialog */}
+      {isBackgroundModalOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 print:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="background-dialog-title"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setIsBackgroundModalOpen(false);
+          }}
+        >
+          <div className="bg-white rounded-xl border border-gray-200 shadow-xl w-full max-w-md overflow-hidden">
+            <div className="border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+              <h3 id="background-dialog-title" className="text-gray-900 font-semibold text-lg">
+                Phone wallpaper background
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsBackgroundModalOpen(false)}
+                className="text-gray-400 hover:text-gray-700 transition-colors"
+                aria-label="Close background picture dialog"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6">
+              <p className="text-sm text-gray-600">
+                You can select your picture for Phone wallpaper background.
+              </p>
+
+              {backgroundPicture && (
+                <div className="mt-4 overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
+                  <div className="relative h-40">
+                    <img
+                      src={backgroundPicture.previewUrl}
+                      alt="Selected phone wallpaper background"
+                      className="h-full w-full object-cover"
+                    />
+                    <span
+                      className="pointer-events-none absolute inset-0 bg-white"
+                      style={{ opacity: backgroundOverlayOpacity }}
+                      aria-hidden="true"
+                    />
+                  </div>
+                  <p className="truncate px-3 py-2 text-xs text-gray-600">
+                    {backgroundPicture.name}
+                  </p>
+                </div>
+              )}
+
+              <div className="mt-5">
+                <div className="mb-2 flex items-center justify-between gap-4">
+                  <label htmlFor="background-overlay" className="text-sm font-medium text-gray-700">
+                    Light overlay opacity
+                  </label>
+                  <output htmlFor="background-overlay" className="text-sm tabular-nums text-gray-600">
+                    {Math.round(backgroundOverlayOpacity * 100)}%
+                  </output>
+                </div>
+                <input
+                  id="background-overlay"
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value={Math.round(backgroundOverlayOpacity * 100)}
+                  onChange={(event) => {
+                    setBackgroundOverlayOpacity(Number(event.target.value) / 100);
+                  }}
+                  disabled={!backgroundPicture}
+                  className="w-full accent-gray-900 disabled:cursor-not-allowed disabled:opacity-40"
+                  aria-describedby="background-overlay-help"
+                />
+                <p id="background-overlay-help" className="mt-1 text-xs text-gray-500">
+                  Increase the overlay when the schedule text is difficult to read.
+                </p>
+              </div>
+
+              {backgroundPictureError && (
+                <div role="alert" className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {backgroundPictureError}
+                </div>
+              )}
+
+              <input
+                ref={backgroundFileInputRef}
+                type="file"
+                accept={BACKGROUND_PICTURE_ACCEPT}
+                onChange={handleBackgroundPictureChange}
+                className="hidden"
+              />
+
+              <div className="mt-5 flex justify-end gap-3 border-t border-gray-100 pt-4">
+                <button
+                  type="button"
+                  onClick={() => backgroundFileInputRef.current?.click()}
+                  className="flex items-center gap-2 rounded-md bg-gray-900 px-4 py-2 font-medium text-white transition-colors hover:bg-gray-800"
+                >
+                  <Upload size={16} /> Select pic
+                </button>
+                <button
+                  type="button"
+                  onClick={clearBackgroundPicture}
+                  disabled={!backgroundPicture}
+                  className="rounded-md border border-gray-300 px-4 py-2 font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Print / Export Modal */}
       {isPrintModalOpen && (
         <div
@@ -492,7 +664,7 @@ const App = () => {
                       key={theme.id}
                       type="button"
                       onClick={() => setWallpaperTheme(theme.id)}
-                      disabled={isExporting}
+                      disabled={isExporting || Boolean(backgroundPicture)}
                       aria-pressed={wallpaperTheme === theme.id}
                       className={`rounded-lg border p-1.5 text-left transition focus:outline-none focus:ring-2 focus:ring-gray-400 disabled:opacity-50 ${
                         wallpaperTheme === theme.id
@@ -510,6 +682,11 @@ const App = () => {
                     </button>
                   ))}
                 </div>
+                {backgroundPicture && (
+                  <p className="mt-2 text-xs text-red-500">
+                    Your custom picture is active. Clear it to use a gradient.
+                  </p>
+                )}
               </fieldset>
             </div>
 

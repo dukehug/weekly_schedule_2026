@@ -1,3 +1,5 @@
+import { drawBackgroundPicture } from './backgroundPicture';
+
 const A4_LANDSCAPE = {
   width: 841.89,
   height: 595.28,
@@ -314,20 +316,34 @@ const createA4ScheduleCanvas = (events) => {
   return canvas;
 };
 
-const createWallpaperCanvas = (events, themeId) => {
+const createWallpaperCanvas = async (
+  events,
+  themeId,
+  backgroundPictureFile,
+  backgroundOverlayOpacity,
+) => {
   const canvas = document.createElement('canvas');
   canvas.width = WALLPAPER.width;
   canvas.height = WALLPAPER.height;
 
   const context = canvas.getContext('2d');
-  const theme = WALLPAPER_THEMES.find(candidate => candidate.id === themeId)
-    || WALLPAPER_THEMES[0];
-  const gradient = context.createLinearGradient(0, 0, canvas.width, canvas.height * 0.25);
-  theme.colors.forEach((color, index) => {
-    gradient.addColorStop(index / (theme.colors.length - 1), color);
-  });
-  context.fillStyle = gradient;
-  context.fillRect(0, 0, canvas.width, canvas.height);
+  if (backgroundPictureFile) {
+    await drawBackgroundPicture(
+      context,
+      canvas,
+      backgroundPictureFile,
+      backgroundOverlayOpacity,
+    );
+  } else {
+    const theme = WALLPAPER_THEMES.find(candidate => candidate.id === themeId)
+      || WALLPAPER_THEMES[0];
+    const gradient = context.createLinearGradient(0, 0, canvas.width, canvas.height * 0.25);
+    theme.colors.forEach((color, index) => {
+      gradient.addColorStop(index / (theme.colors.length - 1), color);
+    });
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+  }
 
   const verticalGlow = context.createLinearGradient(0, 0, 0, canvas.height);
   verticalGlow.addColorStop(0, 'rgba(255,255,255,0.22)');
@@ -598,7 +614,12 @@ export const exportSchedule = async (format, events = [], options = {}) => {
 
   if (format === 'wallpaper') {
     await waitForFonts();
-    const wallpaperCanvas = createWallpaperCanvas(events, options.wallpaperTheme);
+    const wallpaperCanvas = await createWallpaperCanvas(
+      events,
+      options.wallpaperTheme,
+      options.backgroundPictureFile,
+      options.backgroundOverlayOpacity,
+    );
     const blob = await canvasToBlob(wallpaperCanvas, 'image/jpeg', 0.94);
     downloadBlob(blob, 'weekly-schedule-wallpaper.jpg');
     return;
