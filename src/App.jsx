@@ -51,6 +51,14 @@ const formatTime12H = (time) => {
   return `${hour12}:${m.toString().padStart(2, '0')} ${period}`;
 };
 
+const formatCurrentTime = (date) => {
+  const hours = date.getHours();
+  const minutes = date.getMinutes();
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const hour12 = hours % 12 || 12;
+  return `${hour12}:${minutes.toString().padStart(2, '0')} ${period}`;
+};
+
 const loadInitialEvents = () => {
   try {
     const saved = localStorage.getItem('mySchedule');
@@ -87,12 +95,28 @@ const App = () => {
   const [importText, setImportText] = useState('');
   const [importError, setImportError] = useState('');
   const [editingEvent, setEditingEvent] = useState(null);
+  const [currentTime, setCurrentTime] = useState(() => new Date());
   
   const [isContinuous, setIsContinuous] = useState(false);
   const [selectedDays, setSelectedDays] = useState([]);
   const [selectedColor, setSelectedColor] = useState(COLOR_OPTIONS[0].value);
   const scheduleHeaderRef = useRef(null);
   const backgroundFileInputRef = useRef(null);
+
+  // Keep the browser-time indicator aligned to the start of each minute.
+  useEffect(() => {
+    let minuteInterval;
+    const millisecondsUntilNextMinute = 60000 - (Date.now() % 60000);
+    const minuteTimeout = window.setTimeout(() => {
+      setCurrentTime(new Date());
+      minuteInterval = window.setInterval(() => setCurrentTime(new Date()), 60000);
+    }, millisecondsUntilNextMinute);
+
+    return () => {
+      window.clearTimeout(minuteTimeout);
+      window.clearInterval(minuteInterval);
+    };
+  }, []);
 
   // Release browser-only preview URLs when a picture is replaced or the app closes.
   useEffect(() => (
@@ -303,6 +327,17 @@ const App = () => {
     }
   };
 
+  const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
+  const scheduleStartMinutes = START_HOUR * 60;
+  const scheduleEndMinutes = END_HOUR * 60;
+  const showCurrentTime = (
+    currentMinutes >= scheduleStartMinutes
+    && currentMinutes <= scheduleEndMinutes
+  );
+  const currentTimeTop = (
+    ((currentMinutes - scheduleStartMinutes) / 60) * HOUR_HEIGHT
+  );
+
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-6 font-sans text-gray-900 print:bg-white print:p-0">
       
@@ -466,6 +501,28 @@ const App = () => {
                   </div>
                 );
               })}
+
+              {/* Browser-local current time; intentionally excluded from printing/export. */}
+              {showCurrentTime && (
+                <div
+                  className="pointer-events-none absolute inset-x-0 z-20 print:hidden"
+                  style={{ top: `${currentTimeTop}px` }}
+                  aria-label={`Current time: ${formatCurrentTime(currentTime)}`}
+                >
+                  <div className="relative h-0 border-t-2 border-gray-950 shadow-[0_1px_3px_rgba(3,7,18,0.32)]">
+                    {currentTime.getMinutes() !== 0 && (
+                      <time
+                        dateTime={`${currentTime.getHours().toString().padStart(2, '0')}:${currentTime.getMinutes().toString().padStart(2, '0')}`}
+                        className="absolute left-0 top-0 flex w-[80px] -translate-y-1/2 justify-center"
+                      >
+                        <span className="rounded-full bg-gray-950 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white shadow-sm">
+                          {formatCurrentTime(currentTime)}
+                        </span>
+                      </time>
+                    )}
+                  </div>
+                </div>
+              )}
 
             </div>
           </div>
