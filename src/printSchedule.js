@@ -156,7 +156,18 @@ const timeToMinutes = (time) => {
   return hours * 60 + minutes;
 };
 
-const createA4ScheduleCanvas = (events) => {
+const formatExportTime = (time, timeFormat) => {
+  const [hours, minutes] = String(time || '00:00').split(':').map(Number);
+  if (timeFormat === '24-hour') {
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+  }
+
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const hour12 = hours % 12 || 12;
+  return `${hour12}:${String(minutes).padStart(2, '0')} ${period}`;
+};
+
+const createA4ScheduleCanvas = (events, timeFormat = '12-hour') => {
   const canvas = document.createElement('canvas');
   canvas.width = A4_CANVAS.width;
   canvas.height = A4_CANVAS.height;
@@ -247,7 +258,11 @@ const createA4ScheduleCanvas = (events) => {
       context.font = '600 20px system-ui, -apple-system, sans-serif';
       context.textAlign = 'center';
       context.textBaseline = 'top';
-      context.fillText(`${String(hour).padStart(2, '0')}:00`, gridX + timeColumnWidth / 2, y + 10);
+      context.fillText(
+        formatExportTime(`${hour}:00`, timeFormat),
+        gridX + timeColumnWidth / 2,
+        y + 10,
+      );
     }
   }
 
@@ -305,7 +320,11 @@ const createA4ScheduleCanvas = (events) => {
       context.globalAlpha = 0.72;
       context.font = '600 18px system-ui, -apple-system, sans-serif';
       context.fillText(
-        fitText(context, `${event.start}–${event.end} · ${event.room || '—'}`, width - 34),
+        fitText(
+          context,
+          `${formatExportTime(event.start, timeFormat)}–${formatExportTime(event.end, timeFormat)} · ${event.room || '—'}`,
+          width - 34,
+        ),
         x + 21,
         y + height - 34,
       );
@@ -321,6 +340,7 @@ const createWallpaperCanvas = async (
   themeId,
   backgroundPictureFile,
   backgroundOverlayOpacity,
+  timeFormat = '12-hour',
 ) => {
   const canvas = document.createElement('canvas');
   canvas.width = WALLPAPER.width;
@@ -434,7 +454,7 @@ const createWallpaperCanvas = async (
     const dayColumnWidth = 226;
     const contentX = cardX + dayColumnWidth + 36;
     const contentRight = cardX + cardWidth - 42;
-    const timeWidth = 210;
+    const timeWidth = 270;
     const roomWidth = 150;
     const subjectX = contentX + timeWidth;
     const subjectWidth = contentRight - subjectX - roomWidth - 28;
@@ -474,7 +494,11 @@ const createWallpaperCanvas = async (
       context.textAlign = 'left';
       context.textBaseline = 'middle';
       context.font = `700 ${compact ? 23 : 27}px system-ui, -apple-system, sans-serif`;
-      context.fillText(`${event.start}–${event.end}`, contentX + 8, rowCenter);
+      context.fillText(
+        `${formatExportTime(event.start, timeFormat)}–${formatExportTime(event.end, timeFormat)}`,
+        contentX + 8,
+        rowCenter,
+      );
 
       context.font = `700 ${compact ? 27 : 33}px system-ui, -apple-system, sans-serif`;
       context.fillText(
@@ -607,7 +631,7 @@ const createPdfBlob = (canvas) => {
 export const exportSchedule = async (format, events = [], options = {}) => {
   if (format === 'a4') {
     await waitForFonts();
-    const scheduleCanvas = createA4ScheduleCanvas(events);
+    const scheduleCanvas = createA4ScheduleCanvas(events, options.timeFormat);
     downloadBlob(createPdfBlob(scheduleCanvas), 'weekly-schedule-a4.pdf');
     return;
   }
@@ -619,6 +643,7 @@ export const exportSchedule = async (format, events = [], options = {}) => {
       options.wallpaperTheme,
       options.backgroundPictureFile,
       options.backgroundOverlayOpacity,
+      options.timeFormat,
     );
     const blob = await canvasToBlob(wallpaperCanvas, 'image/jpeg', 0.94);
     downloadBlob(blob, 'weekly-schedule-wallpaper.jpg');

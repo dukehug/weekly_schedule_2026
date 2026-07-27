@@ -86,6 +86,7 @@ const App = () => {
   const [isBackgroundModalOpen, setIsBackgroundModalOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [printError, setPrintError] = useState('');
+  const [exportTimeFormat, setExportTimeFormat] = useState('12-hour');
   const [wallpaperTheme, setWallpaperTheme] = useState(WALLPAPER_THEMES[0].id);
   const [backgroundPicture, setBackgroundPicture] = useState(null);
   const [backgroundOverlayOpacity, setBackgroundOverlayOpacity] = useState(
@@ -146,12 +147,14 @@ const App = () => {
 
     try {
       await exportSchedule(format, events, {
+        timeFormat: exportTimeFormat,
         wallpaperTheme,
         backgroundPictureFile: backgroundPicture?.file,
         backgroundOverlayOpacity,
       });
       trackEvent('export_schedule', {
         export_format: format,
+        time_format: exportTimeFormat,
         ...(format === 'wallpaper'
           ? { wallpaper_background: backgroundPicture ? 'custom' : wallpaperTheme }
           : {}),
@@ -675,6 +678,41 @@ const App = () => {
             </div>
 
             <div className="p-6 grid sm:grid-cols-2 gap-3">
+              <fieldset className="sm:col-span-2 mb-2">
+                <legend className="text-sm font-medium text-gray-700">Time system</legend>
+                <div className="mt-2 grid grid-cols-2 gap-3">
+                  {[
+                    { value: '12-hour', label: '12-hour', example: '2:00 PM' },
+                    { value: '24-hour', label: '24-hour', example: '14:00' },
+                  ].map(option => (
+                    <label
+                      key={option.value}
+                      className={`flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-colors ${
+                        exportTimeFormat === option.value
+                          ? 'border-gray-900 bg-gray-50'
+                          : 'border-gray-200 hover:border-gray-400'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="export-time-format"
+                        value={option.value}
+                        checked={exportTimeFormat === option.value}
+                        onChange={() => setExportTimeFormat(option.value)}
+                        disabled={isExporting}
+                        className="accent-gray-950"
+                      />
+                      <span>
+                        <span className="block text-sm font-medium text-gray-900">
+                          {option.label}
+                        </span>
+                        <span className="block text-xs text-gray-500">{option.example}</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
               <button
                 type="button"
                 onClick={() => handlePrint('a4')}
