@@ -456,7 +456,7 @@ const createWallpaperCanvas = async (
     const contentRight = cardX + cardWidth - 42;
     const timeWidth = 270;
     const roomWidth = 150;
-    const subjectX = contentX + timeWidth;
+    const subjectX = contentX + timeWidth + 42;
     const subjectWidth = contentRight - subjectX - roomWidth - 28;
 
     context.strokeStyle = 'rgba(32, 70, 112, 0.18)';
