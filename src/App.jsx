@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Save, Download, Plus, X, Trash2, Clock, MapPin, Calendar, CheckSquare, Check, RotateCcw, Upload, FileText, Smartphone, LoaderCircle, ImagePlus } from 'lucide-react';
+import { Save, Download, Plus, X, Trash2, Clock, MapPin, Calendar, CheckSquare, Check, RotateCcw, Upload, FileText, Smartphone, LoaderCircle, ImagePlus, Moon, Sun, SunMoon } from 'lucide-react';
 import { parseImportedSchedule } from './importSchedule';
 import { exportSchedule, WALLPAPER_THEMES } from './printSchedule';
 import { trackEvent } from './analytics';
@@ -37,6 +37,21 @@ const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
 const START_HOUR = 7;
 const END_HOUR = 22;
 const HOUR_HEIGHT = 80;
+const THEME_STORAGE_KEY = 'themePreference';
+const THEME_OPTIONS = [
+  { value: 'dark', label: 'Dark', icon: Moon },
+  { value: 'light', label: 'Light', icon: Sun },
+  { value: 'system', label: 'System', icon: SunMoon },
+];
+
+const loadThemePreference = () => {
+  try {
+    const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+    return THEME_OPTIONS.some(option => option.value === savedTheme) ? savedTheme : 'system';
+  } catch {
+    return 'system';
+  }
+};
 
 // 輔助函數：時間轉換
 const timeToMinutes = (time) => {
@@ -97,12 +112,51 @@ const App = () => {
   const [importError, setImportError] = useState('');
   const [editingEvent, setEditingEvent] = useState(null);
   const [currentTime, setCurrentTime] = useState(() => new Date());
+  const [theme, setTheme] = useState(loadThemePreference);
+  const [isThemeMenuOpen, setIsThemeMenuOpen] = useState(false);
   
   const [isContinuous, setIsContinuous] = useState(false);
   const [selectedDays, setSelectedDays] = useState([]);
   const [selectedColor, setSelectedColor] = useState(COLOR_OPTIONS[0].value);
   const scheduleHeaderRef = useRef(null);
   const backgroundFileInputRef = useRef(null);
+  const themeMenuRef = useRef(null);
+
+  useEffect(() => {
+    const systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
+    const applyTheme = () => {
+      const useDarkTheme = theme === 'dark' || (theme === 'system' && systemTheme.matches);
+      document.documentElement.classList.toggle('dark', useDarkTheme);
+      document.documentElement.style.colorScheme = useDarkTheme ? 'dark' : 'light';
+    };
+
+    applyTheme();
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, theme);
+    } catch {
+      // The preference still works for this session when storage is unavailable.
+    }
+
+    if (theme === 'system') systemTheme.addEventListener('change', applyTheme);
+    return () => systemTheme.removeEventListener('change', applyTheme);
+  }, [theme]);
+
+  useEffect(() => {
+    if (!isThemeMenuOpen) return undefined;
+
+    const closeThemeMenu = (event) => {
+      if (event.key === 'Escape' || !themeMenuRef.current?.contains(event.target)) {
+        setIsThemeMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', closeThemeMenu);
+    document.addEventListener('pointerdown', closeThemeMenu);
+    return () => {
+      document.removeEventListener('keydown', closeThemeMenu);
+      document.removeEventListener('pointerdown', closeThemeMenu);
+    };
+  }, [isThemeMenuOpen]);
 
   // Keep the browser-time indicator aligned to the start of each minute.
   useEffect(() => {
@@ -340,9 +394,10 @@ const App = () => {
   const currentTimeTop = (
     ((currentMinutes - scheduleStartMinutes) / 60) * HOUR_HEIGHT
   );
+  const ActiveThemeIcon = THEME_OPTIONS.find(option => option.value === theme)?.icon || SunMoon;
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-6 font-sans text-gray-900 print:bg-white print:p-0">
+    <div className="min-h-screen bg-slate-50 p-4 md:p-6 font-sans text-gray-900 transition-colors print:bg-white print:p-0">
       
       {/* Header */}
       <div className="max-w-full mx-auto mb-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 print:hidden">
@@ -356,6 +411,49 @@ const App = () => {
             </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <div className="relative" ref={themeMenuRef}>
+            <button
+              type="button"
+              onClick={() => setIsThemeMenuOpen(isOpen => !isOpen)}
+              className="flex h-[42px] w-[42px] items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 transition-colors hover:bg-gray-50"
+              aria-label={`Theme: ${theme}. Choose theme`}
+              aria-haspopup="menu"
+              aria-expanded={isThemeMenuOpen}
+              title={`Theme: ${theme}`}
+            >
+              <ActiveThemeIcon size={18} />
+            </button>
+            {isThemeMenuOpen && (
+              <div
+                role="menu"
+                aria-label="Theme"
+                className="absolute left-0 top-full z-50 mt-2 min-w-36 overflow-hidden rounded-lg border border-gray-200 bg-white p-1.5 shadow-xl"
+              >
+                {THEME_OPTIONS.map(({ value, label, icon }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    role="menuitemradio"
+                    aria-checked={theme === value}
+                    onClick={() => {
+                      setTheme(value);
+                      setIsThemeMenuOpen(false);
+                      trackEvent('change_theme', { theme: value });
+                    }}
+                    className={`flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm transition-colors ${
+                      theme === value
+                        ? 'bg-gray-100 font-medium text-gray-950'
+                        : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {React.createElement(icon, { size: 17 })}
+                    <span className="flex-1">{label}</span>
+                    {theme === value && <Check size={15} />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <button onClick={openNewEventModal} className="flex items-center gap-2 bg-gray-900 hover:bg-gray-800 text-white px-3.5 py-2 rounded-md border border-gray-900 transition-colors">
             <Plus size={18} /> Add New
           </button>
@@ -572,7 +670,7 @@ const App = () => {
                       className="h-full w-full object-cover"
                     />
                     <span
-                      className="pointer-events-none absolute inset-0 bg-white"
+                      className="wallpaper-light-overlay pointer-events-none absolute inset-0 bg-white"
                       style={{ opacity: backgroundOverlayOpacity }}
                       aria-hidden="true"
                     />
@@ -946,7 +1044,7 @@ const App = () => {
                                  className={`w-8 h-8 rounded-full ${color.bg} border-2 flex items-center justify-center transition-colors ${selectedColor === color.value ? 'border-gray-700 ring-2 ring-gray-200' : 'border-transparent'}`}
                                  title={color.name}
                              >
-                                 {selectedColor === color.value && <Check size={14} className="text-gray-700" />}
+                                 {selectedColor === color.value && <Check size={14} className="subject-color-check text-gray-700" />}
                              </button>
                          ))}
                      </div>
