@@ -411,17 +411,18 @@ const App = () => {
             </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <div className="relative" ref={themeMenuRef}>
+          <div className="relative shrink-0" ref={themeMenuRef}>
             <button
               type="button"
               onClick={() => setIsThemeMenuOpen(isOpen => !isOpen)}
-              className="flex h-[42px] w-[42px] items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 transition-colors hover:bg-gray-50"
+              className="flex w-[calc(1lh+1rem+2px)] items-center justify-center rounded-md border border-gray-300 bg-white py-2 text-gray-700 transition-colors hover:bg-gray-50"
               aria-label={`Theme: ${theme}. Choose theme`}
               aria-haspopup="menu"
               aria-expanded={isThemeMenuOpen}
               title={`Theme: ${theme}`}
             >
               <ActiveThemeIcon size={18} />
+              <span aria-hidden="true" className="invisible w-0 overflow-hidden">Theme</span>
             </button>
             {isThemeMenuOpen && (
               <div
