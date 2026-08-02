@@ -1,4 +1,4 @@
-import { drawBackgroundPicture } from './backgroundPicture';
+import { drawBackgroundPicture } from './backgroundPicture.js';
 
 const A4_LANDSCAPE = {
   width: 841.89,
