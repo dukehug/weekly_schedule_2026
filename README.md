@@ -1,6 +1,6 @@
 # Weekly Schedule 2026
 
-![schedule_make](/Users/dukehsu/Coding/weekly_schedule_2026/public/og-image.jpg)
+![schedule_make](public/og-image.jpg)
 
 Project started: January 7, 2026
 
