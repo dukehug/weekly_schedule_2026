@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import AppFooter from './components/AppFooter.jsx';
 import AppHeader from './components/AppHeader.jsx';
 import BackgroundPictureModal from './components/BackgroundPictureModal.jsx';
 import EventModal from './components/EventModal.jsx';
@@ -93,6 +94,8 @@ const App = () => {
       />
 
       <ScheduleGrid events={events} onEditEvent={openEditEventModal} />
+
+      <AppFooter />
 
       {isEventModalOpen && (
         <EventModal
