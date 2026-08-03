@@ -1,4 +1,5 @@
 import { drawBackgroundPicture } from './backgroundPicture.js';
+import { getWallpaperScheduleLayout } from './wallpaperLayout.js';
 
 const A4_LANDSCAPE = {
   width: 841.89,
@@ -381,11 +382,16 @@ const createWallpaperCanvas = async (
   const activeDayNames = groups.map(group => group.day);
   const firstDay = activeDayNames[0] || 'Monday';
   const lastDay = activeDayNames.at(-1) || 'Sunday';
+  const wallpaperScheduleLayout = getWallpaperScheduleLayout();
 
   context.fillStyle = '#10243d';
   context.font = '500 82px system-ui, -apple-system, sans-serif';
   context.textAlign = 'center';
-  context.fillText('WEEKLY SCHEDULE', canvas.width / 2, 134);
+  context.fillText(
+    'WEEKLY SCHEDULE',
+    canvas.width / 2,
+    wallpaperScheduleLayout.titleY,
+  );
 
   context.fillStyle = 'rgba(16, 36, 61, 0.84)';
   context.font = '700 25px system-ui, -apple-system, sans-serif';
@@ -393,31 +399,42 @@ const createWallpaperCanvas = async (
   context.fillText(
     `${firstDay.toUpperCase()} TO ${lastDay.toUpperCase()} `,
     canvas.width / 2,
-    194,
+    wallpaperScheduleLayout.dateRangeY,
   );
 
   context.strokeStyle = 'rgba(16, 36, 61, 0.34)';
   context.lineWidth = 2;
   context.beginPath();
-  context.moveTo(520, 236);
-  context.lineTo(920, 236);
+  context.moveTo(520, wallpaperScheduleLayout.dividerY);
+  context.lineTo(920, wallpaperScheduleLayout.dividerY);
   context.stroke();
 
   if (groups.length === 0) {
     context.fillStyle = 'rgba(255,255,255,0.18)';
-    roundedRect(context, WALLPAPER.padding, 340, canvas.width - WALLPAPER.padding * 2, 360, 80);
+    roundedRect(
+      context,
+      WALLPAPER.padding,
+      wallpaperScheduleLayout.emptyCardY,
+      canvas.width - WALLPAPER.padding * 2,
+      360,
+      80,
+    );
     context.fill();
     context.strokeStyle = 'rgba(16, 36, 61, 0.38)';
     context.stroke();
     context.fillStyle = '#10243d';
     context.font = '500 48px system-ui, -apple-system, sans-serif';
-    context.fillText('NO CLASSES YET', canvas.width / 2, 545);
+    context.fillText(
+      'NO CLASSES YET',
+      canvas.width / 2,
+      wallpaperScheduleLayout.emptyMessageY,
+    );
     return canvas;
   }
 
   const cardX = WALLPAPER.padding;
   const cardWidth = canvas.width - WALLPAPER.padding * 2;
-  const cardsTop = 310;
+  const cardsTop = wallpaperScheduleLayout.cardsTop;
   const cardsBottom = 2690;
   const cardGap = 26;
   const cardPaddingY = 30;
