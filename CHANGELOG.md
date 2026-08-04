@@ -1,15 +1,27 @@
-# 更新日誌
+# Changelog
 
-## 2.7.1 - 2026-08-03
+## 2.7.2 - August 4, 2026
 
-### 新增
-- 頁面底部現在會顯示作者資訊與目前版本號，回報問題時更容易確認使用中的版本
-- 星期標題下方現在會顯示本週日期，並清楚標示今天所在的欄位
+### Added
+- Drag your picture to line up the perfect phone wallpaper crop, then use the Zoom slider for a closer look  
+- Thanks for reporting this ,  Edrick Alicaway.^_^ 
+- The schedule now checks your picture and picks light or dark colors automatically, so every class stays easy to read
+- Click the version number in the bottom-right corner to see what is new
 
-### 調整
-- 手機壁紙中的時間表向下移動，避免被鎖定畫面的時間遮住
+### Changed
+- Press Esc to close any dialog and get back to your schedule quickly
+- Wallpaper setup now gives you a friendly reminder about where to download your finished wallpaper
 
-## 2026-08-02
+## 2.7.1 - August 3, 2026
 
-### 調整
-- 手機左右滑動查看整週課表時，時間欄會固定在左側，方便隨時確認課程時間
+### Added
+- The footer now shows the creator and app version, making it easier to share the right version when you need help
+- Dates now appear below each weekday, with today clearly highlighted
+
+### Changed
+- The phone wallpaper schedule sits lower, leaving more room for your lock-screen clock
+
+## August 2, 2026
+
+### Changed
+- The time column now stays in place while you swipe across the weekly schedule on your phone

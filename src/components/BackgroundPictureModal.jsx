@@ -1,16 +1,25 @@
 import { Upload } from 'lucide-react';
 import { useRef } from 'react';
-import { BACKGROUND_PICTURE_ACCEPT } from '../utils/backgroundPicture.js';
+import {
+  BACKGROUND_PICTURE_ACCEPT,
+  DEFAULT_BACKGROUND_OVERLAY_OPACITY,
+  DEFAULT_BACKGROUND_PICTURE_TRANSFORM,
+  MAX_BACKGROUND_PICTURE_ZOOM,
+  MIN_BACKGROUND_PICTURE_ZOOM,
+} from '../utils/backgroundPicture.js';
 import ModalShell from './ModalShell.jsx';
+import WallpaperCropPreview from './WallpaperCropPreview.jsx';
 
 const BackgroundPictureModal = ({
   backgroundOverlayOpacity,
   backgroundPicture,
   backgroundPictureError,
+  backgroundPictureTransform,
   onClear,
   onClose,
   onOpacityChange,
   onSelect,
+  onTransformChange,
 }) => {
   const fileInputRef = useRef(null);
 
@@ -28,22 +37,60 @@ const BackgroundPictureModal = ({
         <p className="text-sm text-gray-600">You can select your picture for Phone wallpaper background.</p>
 
         {backgroundPicture && (
-          <div className="mt-4 overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
-            <div className="relative h-40">
-              <img src={backgroundPicture.previewUrl} alt="Selected phone wallpaper background" className="h-full w-full object-cover" />
-              <span
-                className="wallpaper-light-overlay pointer-events-none absolute inset-0 bg-white"
-                style={{ opacity: backgroundOverlayOpacity }}
-                aria-hidden="true"
+          <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
+            <p className="mb-3 text-center text-xs font-medium text-gray-600">
+              Drag the picture to move it. Use Zoom to get the crop just right.
+            </p>
+            <div className="flex justify-center">
+              <WallpaperCropPreview
+                picture={backgroundPicture}
+                overlayOpacity={backgroundOverlayOpacity}
+                transform={backgroundPictureTransform}
+                onTransformChange={onTransformChange}
               />
             </div>
-            <p className="truncate px-3 py-2 text-xs text-gray-600">{backgroundPicture.name}</p>
+            <p className="mt-3 truncate text-center text-xs text-gray-600">{backgroundPicture.name}</p>
+
+            <div className="mt-4 space-y-4 border-t border-gray-200 pt-4">
+              <div>
+                <div className="mb-2 flex items-center justify-between gap-4">
+                  <label htmlFor="background-zoom" className="text-sm font-medium text-gray-700">Zoom</label>
+                  <output htmlFor="background-zoom" className="text-sm tabular-nums text-gray-600">
+                    {Math.round(backgroundPictureTransform.zoom * 100)}%
+                  </output>
+                </div>
+                <input
+                  id="background-zoom"
+                  type="range"
+                  min={MIN_BACKGROUND_PICTURE_ZOOM * 100}
+                  max={MAX_BACKGROUND_PICTURE_ZOOM * 100}
+                  step="1"
+                  value={Math.round(backgroundPictureTransform.zoom * 100)}
+                  onChange={event => onTransformChange({
+                    zoom: Number(event.target.value) / 100,
+                  })}
+                  className="w-full accent-gray-900"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => onTransformChange(DEFAULT_BACKGROUND_PICTURE_TRANSFORM)}
+                className="text-sm font-medium text-gray-600 underline underline-offset-2 transition-colors hover:text-gray-900"
+              >
+                Reset crop
+              </button>
+
+              <p className="rounded-md border border-blue-100 bg-blue-50 px-3 py-2 text-xs leading-5 text-blue-800">
+                When you&apos;re happy with the crop, return to Print and choose Phone wallpaper to download it.
+              </p>
+            </div>
           </div>
         )}
 
         <div className="mt-5">
           <div className="mb-2 flex items-center justify-between gap-4">
-            <label htmlFor="background-overlay" className="text-sm font-medium text-gray-700">Light overlay opacity</label>
+            <label htmlFor="background-overlay" className="text-sm font-medium text-gray-700">Contrast strength</label>
             <output htmlFor="background-overlay" className="text-sm tabular-nums text-gray-600">
               {Math.round(backgroundOverlayOpacity * 100)}%
             </output>
@@ -61,8 +108,22 @@ const BackgroundPictureModal = ({
             aria-describedby="background-overlay-help"
           />
           <p id="background-overlay-help" className="mt-1 text-xs text-gray-500">
-            Increase the overlay when the schedule text is difficult to read.
+            Auto contrast checks your crop, picks light or dark schedule text, and adds a matching veil. 65% or more is recommended.
           </p>
+          {backgroundPicture && backgroundOverlayOpacity < 0.65 && (
+            <p className="mt-2 text-xs font-medium text-amber-700">
+              Text may be difficult to read at this level.
+            </p>
+          )}
+          {backgroundPicture && backgroundOverlayOpacity !== DEFAULT_BACKGROUND_OVERLAY_OPACITY && (
+            <button
+              type="button"
+              onClick={() => onOpacityChange(DEFAULT_BACKGROUND_OVERLAY_OPACITY)}
+              className="mt-2 text-sm font-medium text-gray-600 underline underline-offset-2 transition-colors hover:text-gray-900"
+            >
+              Restore recommended contrast
+            </button>
+          )}
         </div>
 
         {backgroundPictureError && (

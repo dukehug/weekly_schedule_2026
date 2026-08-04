@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import {
   createBackgroundPicture,
   DEFAULT_BACKGROUND_OVERLAY_OPACITY,
+  DEFAULT_BACKGROUND_PICTURE_TRANSFORM,
+  normalizeBackgroundPictureTransform,
   releaseBackgroundPicture,
 } from '../utils/backgroundPicture.js';
 import { trackEvent } from '../utils/analytics.js';
@@ -12,6 +14,9 @@ export const useBackgroundPicture = () => {
   const [backgroundOverlayOpacity, setBackgroundOverlayOpacity] = useState(
     DEFAULT_BACKGROUND_OVERLAY_OPACITY,
   );
+  const [backgroundPictureTransform, setBackgroundPictureTransform] = useState(
+    DEFAULT_BACKGROUND_PICTURE_TRANSFORM,
+  );
   const [backgroundPictureError, setBackgroundPictureError] = useState('');
 
   useEffect(() => (
@@ -21,6 +26,7 @@ export const useBackgroundPicture = () => {
   const selectBackgroundPicture = (file) => {
     try {
       setBackgroundPicture(createBackgroundPicture(file));
+      setBackgroundPictureTransform(DEFAULT_BACKGROUND_PICTURE_TRANSFORM);
       setBackgroundPictureError('');
       trackEvent('set_wallpaper_background', { picture_type: file.type });
     } catch (error) {
@@ -32,17 +38,30 @@ export const useBackgroundPicture = () => {
   const clearBackgroundPicture = () => {
     setBackgroundPicture(null);
     setBackgroundOverlayOpacity(DEFAULT_BACKGROUND_OVERLAY_OPACITY);
+    setBackgroundPictureTransform(DEFAULT_BACKGROUND_PICTURE_TRANSFORM);
     setBackgroundPictureError('');
     trackEvent('clear_wallpaper_background');
+  };
+
+  /** Merge one or more crop controls while keeping every value in range. */
+  const updateBackgroundPictureTransform = (changes) => {
+    setBackgroundPictureTransform(currentTransform => (
+      normalizeBackgroundPictureTransform({
+        ...currentTransform,
+        ...changes,
+      })
+    ));
   };
 
   return {
     backgroundOverlayOpacity,
     backgroundPicture,
     backgroundPictureError,
+    backgroundPictureTransform,
     clearBackgroundPicture,
     selectBackgroundPicture,
     setBackgroundOverlayOpacity,
     setBackgroundPictureError,
+    updateBackgroundPictureTransform,
   };
 };

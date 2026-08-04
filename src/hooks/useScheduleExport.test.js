@@ -9,6 +9,7 @@ const ExportProbe = () => {
     events: [],
     backgroundPicture: null,
     backgroundOverlayOpacity: 0.72,
+    backgroundPictureTransform: { zoom: 1, positionX: 0.5, positionY: 0.5 },
   });
   return createElement('output', null, JSON.stringify({
     error: exportState.exportError,

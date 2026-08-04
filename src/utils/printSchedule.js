@@ -43,6 +43,47 @@ export const WALLPAPER_THEMES = [
   },
 ];
 
+// The photo crop chooses one of these palettes. A matching veil is added by
+// backgroundPicture.js so text stays readable without hiding the whole photo.
+const WALLPAPER_INK_PALETTES = {
+  dark: {
+    primary: '#10243d',
+    secondary: 'rgba(16, 36, 61, 0.84)',
+    divider: 'rgba(16, 36, 61, 0.34)',
+    emptyCardFill: 'rgba(255, 255, 255, 0.18)',
+    emptyCardBorder: 'rgba(16, 36, 61, 0.38)',
+    cardFill: 'rgba(74, 116, 171, 0.13)',
+    cardBorder: 'rgba(32, 70, 112, 0.42)',
+    cardDivider: 'rgba(32, 70, 112, 0.18)',
+    rowDivider: 'rgba(32, 70, 112, 0.10)',
+    body: '#17304d',
+    bodySecondary: 'rgba(23, 48, 77, 0.84)',
+    footer: 'rgba(16, 36, 61, 0.72)',
+    footerDivider: 'rgba(32, 70, 112, 0.14)',
+    glowTop: 'rgba(255, 255, 255, 0.22)',
+    glowMiddle: 'rgba(255, 255, 255, 0.06)',
+    glowBottom: 'rgba(255, 255, 255, 0.28)',
+  },
+  light: {
+    primary: '#f8fafc',
+    secondary: 'rgba(248, 250, 252, 0.88)',
+    divider: 'rgba(248, 250, 252, 0.42)',
+    emptyCardFill: 'rgba(15, 23, 42, 0.26)',
+    emptyCardBorder: 'rgba(248, 250, 252, 0.46)',
+    cardFill: 'rgba(15, 23, 42, 0.32)',
+    cardBorder: 'rgba(248, 250, 252, 0.48)',
+    cardDivider: 'rgba(248, 250, 252, 0.26)',
+    rowDivider: 'rgba(248, 250, 252, 0.18)',
+    body: '#f8fafc',
+    bodySecondary: 'rgba(248, 250, 252, 0.84)',
+    footer: 'rgba(248, 250, 252, 0.78)',
+    footerDivider: 'rgba(248, 250, 252, 0.24)',
+    glowTop: 'rgba(0, 0, 0, 0.18)',
+    glowMiddle: 'rgba(0, 0, 0, 0.04)',
+    glowBottom: 'rgba(0, 0, 0, 0.24)',
+  },
+};
+
 const A4_CANVAS = {
   width: 3508,
   height: 2480,
@@ -341,6 +382,7 @@ const createWallpaperCanvas = async (
   themeId,
   backgroundPictureFile,
   backgroundOverlayOpacity,
+  backgroundPictureTransform,
   timeFormat = '12-hour',
 ) => {
   const canvas = document.createElement('canvas');
@@ -348,12 +390,16 @@ const createWallpaperCanvas = async (
   canvas.height = WALLPAPER.height;
 
   const context = canvas.getContext('2d');
+  let wallpaperTextTone = 'dark';
   if (backgroundPictureFile) {
-    await drawBackgroundPicture(
+    wallpaperTextTone = await drawBackgroundPicture(
       context,
       canvas,
       backgroundPictureFile,
-      backgroundOverlayOpacity,
+      {
+        overlayOpacity: backgroundOverlayOpacity,
+        transform: backgroundPictureTransform,
+      },
     );
   } else {
     const theme = WALLPAPER_THEMES.find(candidate => candidate.id === themeId)
@@ -365,11 +411,12 @@ const createWallpaperCanvas = async (
     context.fillStyle = gradient;
     context.fillRect(0, 0, canvas.width, canvas.height);
   }
+  const wallpaperInk = WALLPAPER_INK_PALETTES[wallpaperTextTone];
 
   const verticalGlow = context.createLinearGradient(0, 0, 0, canvas.height);
-  verticalGlow.addColorStop(0, 'rgba(255,255,255,0.22)');
-  verticalGlow.addColorStop(0.65, 'rgba(255,255,255,0.06)');
-  verticalGlow.addColorStop(1, 'rgba(255,255,255,0.28)');
+  verticalGlow.addColorStop(0, wallpaperInk.glowTop);
+  verticalGlow.addColorStop(0.65, wallpaperInk.glowMiddle);
+  verticalGlow.addColorStop(1, wallpaperInk.glowBottom);
   context.fillStyle = verticalGlow;
   context.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -384,7 +431,7 @@ const createWallpaperCanvas = async (
   const lastDay = activeDayNames.at(-1) || 'Sunday';
   const wallpaperScheduleLayout = getWallpaperScheduleLayout();
 
-  context.fillStyle = '#10243d';
+  context.fillStyle = wallpaperInk.primary;
   context.font = '500 82px system-ui, -apple-system, sans-serif';
   context.textAlign = 'center';
   context.fillText(
@@ -393,7 +440,7 @@ const createWallpaperCanvas = async (
     wallpaperScheduleLayout.titleY,
   );
 
-  context.fillStyle = 'rgba(16, 36, 61, 0.84)';
+  context.fillStyle = wallpaperInk.secondary;
   context.font = '700 25px system-ui, -apple-system, sans-serif';
   context.letterSpacing = '2px';
   context.fillText(
@@ -402,7 +449,7 @@ const createWallpaperCanvas = async (
     wallpaperScheduleLayout.dateRangeY,
   );
 
-  context.strokeStyle = 'rgba(16, 36, 61, 0.34)';
+  context.strokeStyle = wallpaperInk.divider;
   context.lineWidth = 2;
   context.beginPath();
   context.moveTo(520, wallpaperScheduleLayout.dividerY);
@@ -410,7 +457,7 @@ const createWallpaperCanvas = async (
   context.stroke();
 
   if (groups.length === 0) {
-    context.fillStyle = 'rgba(255,255,255,0.18)';
+    context.fillStyle = wallpaperInk.emptyCardFill;
     roundedRect(
       context,
       WALLPAPER.padding,
@@ -420,9 +467,9 @@ const createWallpaperCanvas = async (
       80,
     );
     context.fill();
-    context.strokeStyle = 'rgba(16, 36, 61, 0.38)';
+    context.strokeStyle = wallpaperInk.emptyCardBorder;
     context.stroke();
-    context.fillStyle = '#10243d';
+    context.fillStyle = wallpaperInk.primary;
     context.font = '500 48px system-ui, -apple-system, sans-serif';
     context.fillText(
       'NO CLASSES YET',
@@ -460,10 +507,10 @@ const createWallpaperCanvas = async (
 
     roundedRect(context, cardX, cardY, cardWidth, cardHeight, 82);
     if (isFilled) {
-      context.fillStyle = 'rgba(74, 116, 171, 0.13)';
+      context.fillStyle = wallpaperInk.cardFill;
       context.fill();
     } else {
-      context.strokeStyle = 'rgba(32, 70, 112, 0.42)';
+      context.strokeStyle = wallpaperInk.cardBorder;
       context.lineWidth = 2.5;
       context.stroke();
     }
@@ -476,14 +523,14 @@ const createWallpaperCanvas = async (
     const subjectX = contentX + timeWidth + 42;
     const subjectWidth = contentRight - subjectX - roomWidth - 28;
 
-    context.strokeStyle = 'rgba(32, 70, 112, 0.18)';
+    context.strokeStyle = wallpaperInk.cardDivider;
     context.lineWidth = 2;
     context.beginPath();
     context.moveTo(cardX + dayColumnWidth, cardY + 42);
     context.lineTo(cardX + dayColumnWidth, cardY + cardHeight - 42);
     context.stroke();
 
-    context.fillStyle = '#10243d';
+    context.fillStyle = wallpaperInk.primary;
     context.font = '400 58px system-ui, -apple-system, sans-serif';
     context.textAlign = 'center';
     context.textBaseline = 'middle';
@@ -499,7 +546,7 @@ const createWallpaperCanvas = async (
       const compact = rowHeight < 92;
 
       if (eventIndex > 0) {
-        context.strokeStyle = 'rgba(32, 70, 112, 0.10)';
+        context.strokeStyle = wallpaperInk.rowDivider;
         context.lineWidth = 1.5;
         context.beginPath();
         context.moveTo(contentX, rowTop);
@@ -507,7 +554,7 @@ const createWallpaperCanvas = async (
         context.stroke();
       }
 
-      context.fillStyle = '#17304d';
+      context.fillStyle = wallpaperInk.body;
       context.textAlign = 'left';
       context.textBaseline = 'middle';
       context.font = `700 ${compact ? 23 : 27}px system-ui, -apple-system, sans-serif`;
@@ -524,7 +571,7 @@ const createWallpaperCanvas = async (
         rowCenter - (compact ? 11 : 18),
       );
 
-      context.fillStyle = 'rgba(23, 48, 77, 0.84)';
+      context.fillStyle = wallpaperInk.bodySecondary;
       context.font = `700 ${compact ? 17 : 20}px system-ui, -apple-system, sans-serif`;
       context.fillText(
         fitText(context, String(event.description || '').toUpperCase(), subjectWidth),
@@ -532,7 +579,7 @@ const createWallpaperCanvas = async (
         rowCenter + (compact ? 15 : 19),
       );
 
-      context.fillStyle = '#17304d';
+      context.fillStyle = wallpaperInk.body;
       context.font = `700 ${compact ? 22 : 27}px system-ui, -apple-system, sans-serif`;
       context.textAlign = 'right';
       context.fillText(
@@ -547,7 +594,7 @@ const createWallpaperCanvas = async (
 
   const footerY = 2812;
 
-  context.fillStyle = 'rgba(16, 36, 61, 0.72)';
+  context.fillStyle = wallpaperInk.footer;
   context.textBaseline = 'alphabetic';
   context.font = '700 22px system-ui, -apple-system, sans-serif';
   context.textAlign = 'left';
@@ -557,7 +604,7 @@ const createWallpaperCanvas = async (
   context.textAlign = 'right';
   context.fillText(daySummary, canvas.width - 88, footerY);
 
-  context.strokeStyle = 'rgba(32, 70, 112, 0.14)';
+  context.strokeStyle = wallpaperInk.footerDivider;
   context.lineWidth = 2;
   context.beginPath();
   context.moveTo(88, footerY + 42);
@@ -660,6 +707,7 @@ export const exportSchedule = async (format, events = [], options = {}) => {
       options.wallpaperTheme,
       options.backgroundPictureFile,
       options.backgroundOverlayOpacity,
+      options.backgroundPictureTransform,
       options.timeFormat,
     );
     const blob = await canvasToBlob(wallpaperCanvas, 'image/jpeg', 0.94);

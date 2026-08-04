@@ -24,10 +24,12 @@ const App = () => {
     backgroundOverlayOpacity,
     backgroundPicture,
     backgroundPictureError,
+    backgroundPictureTransform,
     clearBackgroundPicture,
     selectBackgroundPicture,
     setBackgroundOverlayOpacity,
     setBackgroundPictureError,
+    updateBackgroundPictureTransform,
   } = useBackgroundPicture();
 
   const [editingEvent, setEditingEvent] = useState(null);
@@ -118,10 +120,12 @@ const App = () => {
           backgroundPicture={backgroundPicture}
           backgroundOverlayOpacity={backgroundOverlayOpacity}
           backgroundPictureError={backgroundPictureError}
+          backgroundPictureTransform={backgroundPictureTransform}
           onClose={() => setIsBackgroundModalOpen(false)}
           onSelect={selectBackgroundPicture}
           onClear={clearBackgroundPicture}
           onOpacityChange={setBackgroundOverlayOpacity}
+          onTransformChange={updateBackgroundPictureTransform}
         />
       )}
 
@@ -130,6 +134,7 @@ const App = () => {
           events={events}
           backgroundPicture={backgroundPicture}
           backgroundOverlayOpacity={backgroundOverlayOpacity}
+          backgroundPictureTransform={backgroundPictureTransform}
           onClose={() => setIsExportModalOpen(false)}
         />
       )}

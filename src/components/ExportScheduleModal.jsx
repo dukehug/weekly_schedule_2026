@@ -12,6 +12,7 @@ const TIME_FORMAT_OPTIONS = [
 const ExportScheduleModal = ({
   backgroundOverlayOpacity,
   backgroundPicture,
+  backgroundPictureTransform,
   events,
   onClose,
 }) => {
@@ -21,7 +22,12 @@ const ExportScheduleModal = ({
     exportError,
     exportScheduleFile,
     isExporting,
-  } = useScheduleExport({ events, backgroundPicture, backgroundOverlayOpacity });
+  } = useScheduleExport({
+    events,
+    backgroundPicture,
+    backgroundOverlayOpacity,
+    backgroundPictureTransform,
+  });
 
   const handleExport = async (format) => {
     const didExport = await exportScheduleFile(format, { timeFormat, wallpaperTheme });
@@ -36,7 +42,6 @@ const ExportScheduleModal = ({
       titleDetail="Choose the size you want to download."
       maxWidthClass="max-w-lg"
       onClose={onClose}
-      isCloseDisabled={isExporting}
     >
       <div className="grid gap-3 p-6 sm:grid-cols-2">
         <fieldset className="mb-2 sm:col-span-2">

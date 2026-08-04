@@ -3,7 +3,12 @@ import { trackEvent } from '../utils/analytics.js';
 import { exportSchedule } from '../utils/printSchedule.js';
 
 /** Coordinate asynchronous downloads while exposing simple UI-ready status. */
-export const useScheduleExport = ({ events, backgroundPicture, backgroundOverlayOpacity }) => {
+export const useScheduleExport = ({
+  events,
+  backgroundPicture,
+  backgroundOverlayOpacity,
+  backgroundPictureTransform,
+}) => {
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState('');
 
@@ -18,6 +23,7 @@ export const useScheduleExport = ({ events, backgroundPicture, backgroundOverlay
         ...options,
         backgroundPictureFile: backgroundPicture?.file,
         backgroundOverlayOpacity,
+        backgroundPictureTransform,
       });
       trackEvent('export_schedule', {
         export_format: format,
